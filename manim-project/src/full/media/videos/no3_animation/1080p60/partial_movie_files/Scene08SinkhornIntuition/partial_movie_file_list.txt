@@ -1,0 +1,11 @@
+# This file is used internally by FFMPEG.
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/394216965_2624455107_223132457.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_1676924324_3249802398.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_521073967_2967543921.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_812095411_2170499835.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_3394500337_703848901.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_1548072700_1329623400.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_4104753269_4112349286.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_2834709167_2457204509.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_3404366704_3840362907.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene08SinkhornIntuition/2766874850_3366045169_1405619617.mp4'
