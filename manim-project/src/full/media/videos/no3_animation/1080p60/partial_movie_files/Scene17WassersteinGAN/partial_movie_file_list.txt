@@ -7,5 +7,5 @@ file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/me
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene17WassersteinGAN/2766874850_2106210871_2484033601.mp4'
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene17WassersteinGAN/2766874850_778896258_2336629590.mp4'
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene17WassersteinGAN/2766874850_2834709167_121064144.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene17WassersteinGAN/2766874850_504053416_3657745828.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene17WassersteinGAN/2766874850_3366045169_2799554191.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene17WassersteinGAN/2766874850_2166440947_3657745828.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene17WassersteinGAN/2766874850_3366045169_3025197995.mp4'

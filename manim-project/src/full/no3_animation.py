@@ -236,7 +236,12 @@ def make_insight_box(text: str, width: float = 7.0) -> VGroup:
         VGroup of (Rectangle, Text).
     """
     logger.debug(f"make_insight_box: '{text}'")
-    label = Text(text, font_size=18, color=C_ACC)
+    label = Text(
+        text,
+        font="Comic Sans MS",
+        font_size=18,
+        color=C_ACC
+    )
     box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
     group = VGroup(box, label)
     group.to_edge(DOWN, buff=0.3)
@@ -676,12 +681,15 @@ class Scene05HNO3(Scene):
                 self.play(Create(line), run_time=0.25)
             self.wait(TM2)
 
-            algo_label = Text("Hungarian Algorithm: O(n^3)", font_size=18, color=C_ACC)
+            algo_label = Text("Hungarian Algorithm: O(n*3)", font_size=18, color=C_ACC)
             algo_label.move_to(np.array([0.0, -2.5, 0.0]))
             self.play(Write(algo_label), run_time=TW)
             self.wait(TM2)
 
-            insight = make_insight_box("Converts no-overlap -> overlap via 1-to-1 matching")
+            label = MathTex(r"\text{Converts no-overlap} \rightarrow \text{overlap via 1-to-1 matching}", font_size=18, color=C_ACC)
+            box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
+            insight = VGroup(box, label)
+            insight.to_edge(DOWN, buff=0.3)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene05HNO3.construct: done")
@@ -757,9 +765,9 @@ class Scene06Limitation(Scene):
 
             # --- Problem labels ---
             problems: List[Text] = [
-                Text("Depends heavily on initial embedding quality", font_size=18, color=C_FLOW),
-                Text("Cannot be trained end-to-end", font_size=18, color=C_FLOW),
-                Text("Discrete optimization - not robust", font_size=18, color=C_FLOW),
+                Text("Highly dependent on initial embedding quality", font_size=16, color=C_FLOW),
+                Text("Cannot be trained end-to-end", font_size=16, color=C_FLOW),
+                Text("Discrete optimization - lacks robustness", font_size=16, color=C_FLOW),
             ]
             for i, prob in enumerate(problems):
                 prob.move_to(np.array([0.0, -2.0 - i * 0.45, 0.0]))
@@ -861,7 +869,10 @@ class Scene07SNO3(Scene):
             self.play(Write(opacity_note), run_time=TW)
             self.wait(TM2)
 
-            insight = make_insight_box("Soft matching: from 1-to-1 mapping -> distribution alignment")
+            label = MathTex(r"\text{Soft matching: from 1-to-1 mapping } \rightarrow \text{ distribution alignment}", font_size=18, color=C_ACC)
+            box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
+            insight = VGroup(box, label)
+            insight.to_edge(DOWN, buff=0.3)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene07SNO3.construct: done")
@@ -914,9 +925,9 @@ class Scene08SinkhornIntuition(Scene):
                 for p, r in zip(target_pos, target_radii)
             ]
 
-            src_label = Text("Source\ndistribution", font_size=18, color=C_A)
+            src_label = Text("Source Distribution", font_size=18, color=C_A)
             src_label.move_to(np.array([-4.0, -2.5, 0.0]))
-            tgt_label = Text("Target\ndistribution", font_size=18, color=C_B)
+            tgt_label = Text("Target Distribution", font_size=18, color=C_B)
             tgt_label.move_to(np.array([4.0, -2.5, 0.0]))
 
             size_note = Text("Size = probability mass", font_size=16, color=C_ACC)
@@ -957,9 +968,10 @@ class Scene08SinkhornIntuition(Scene):
             )
             self.wait(TM2)
 
-            insight = make_insight_box(
-                "Sinkhorn: differentiable OT -> trains end-to-end in deep learning"
-            )
+            label = MathTex(r"\text{Sinkhorn: differentiable OT } \rightarrow \text{ trains end-to-end in deep learning}", font_size=18, color=C_ACC)
+            box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
+            insight = VGroup(box, label)
+            insight.to_edge(DOWN, buff=0.3)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene08SinkhornIntuition.construct: done")
@@ -991,15 +1003,15 @@ class Scene09FinalObjective(Scene):
             self.play(FadeIn(title), run_time=TF)
 
             # --- Component 1: Recommendation loss ---
-            rec_loss = Text("L_rec", font_size=48, color=C_A, weight="BOLD")
+            rec_loss = Text("L rec", font_size=48, color=C_A, weight="BOLD")
             rec_loss.move_to(np.array([-3.0, 0.5, 0.0]))
-            rec_desc = Text("Recommendation\naccuracy", font_size=18, color=C_A)
+            rec_desc = Text("Recommendation accuracy", font_size=18, color=C_A)
             rec_desc.next_to(rec_loss, DOWN, buff=0.3)
 
             # --- Component 2: Sinkhorn loss ---
-            sink_loss = Text("λ·L_sink", font_size=48, color=C_B, weight="BOLD")
+            sink_loss = Text("lambda * L sink", font_size=48, color=C_B, weight="BOLD")
             sink_loss.move_to(np.array([3.0, 0.5, 0.0]))
-            sink_desc = Text("Distribution\nalignment (Sinkhorn)", font_size=18, color=C_B)
+            sink_desc = Text("Distribution alignment (Sinkhorn)", font_size=18, color=C_B)
             sink_desc.next_to(sink_loss, DOWN, buff=0.3)
 
             self.play(
@@ -1015,7 +1027,7 @@ class Scene09FinalObjective(Scene):
 
             # --- Merged final equation ---
             final_eq = Text(
-                "L = L_rec + λ·L_sink",
+                "L = L rec + lambda * L sink",
                 font_size=44,
                 color=C_TEXT,
                 weight="BOLD",
@@ -1129,7 +1141,7 @@ class Scene11GradientDescent(Scene):
                 color=C_A,
                 stroke_width=3,
             )
-            curve_label = Text("L(θ) = θ²", font_size=24, color=C_A, weight="BOLD")
+            curve_label = Text("L(theta) = theta^2", font_size=24, color=C_A, weight="BOLD")
             curve_label.next_to(curve, UP + RIGHT, buff=0.2)
 
             self.play(Create(axes), FadeIn(x_label), FadeIn(y_label), run_time=TM)
@@ -1217,7 +1229,7 @@ class Scene12LossLandscape(Scene):
                 color=C_FLOW,
                 stroke_width=2.5,
             )
-            hno3_label = Text("HNO3\n(Hard Matching)", font_size=18, color=C_FLOW)
+            hno3_label = Text("HNO3 - Hard Matching", font_size=18, color=C_FLOW)
             hno3_label.next_to(axes_l, DOWN, buff=0.2)
 
             # --- Right axes: SNO3 smooth landscape ---
@@ -1238,7 +1250,7 @@ class Scene12LossLandscape(Scene):
                 color=C_B,
                 stroke_width=2.5,
             )
-            sno3_label = Text("SNO3\n(Soft Matching)", font_size=18, color=C_B)
+            sno3_label = Text("SNO3 - Soft Matching", font_size=18, color=C_B)
             sno3_label.next_to(axes_r, DOWN, buff=0.2)
 
             # --- Divider ---
@@ -1491,9 +1503,10 @@ class Scene14SinkhornConvergence(Scene):
             self._show_transport_arrows(converged)
             self.wait(TM2)
 
-            insight = make_insight_box(
-                "Sinkhorn = differentiable OT -> enables end-to-end gradient flow"
-            )
+            label = MathTex(r"\text{Sinkhorn = differentiable OT } \rightarrow \text{ enables end-to-end gradient flow}", font_size=18, color=C_ACC)
+            box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
+            insight = VGroup(box, label)
+            insight.to_edge(DOWN, buff=0.3)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene14SinkhornConvergence.construct: done")
@@ -1717,7 +1730,7 @@ class Scene16KLvsSinkhorn(Scene):
             logger.info("Scene16KLvsSinkhorn.construct: start")
             set_background(self)
 
-            title = make_title("KL Divergence vs Sinkhorn Distance")
+            title = make_title("KL Divergence vs Sinkhorn Distance", "Handling non-overlapping distributions")
             self.play(FadeIn(title), run_time=TF)
 
             # --- Left panel: KL divergence ---
@@ -1731,7 +1744,7 @@ class Scene16KLvsSinkhorn(Scene):
             )
             axes_l.shift(LEFT * 3.3 + DOWN * 0.3)
 
-            kl_header = Text("KL Divergence", font_size=22, color=C_FLOW, weight="BOLD")
+            kl_header = Text("KL Divergence (Failed)", font_size=20, color=C_FLOW, weight="BOLD")
             kl_header.next_to(axes_l, UP, buff=0.2)
 
             # Two Gaussians with NO overlap
@@ -1745,7 +1758,7 @@ class Scene16KLvsSinkhorn(Scene):
                 x_range=[0.0, 6.0],
                 color=C_B, stroke_width=2.5,
             )
-            kl_infinity = Text("KL = ∞", font_size=30, color=C_FLOW, weight="BOLD")
+            kl_infinity = Text("KL = infinity", font_size=30, color=C_FLOW, weight="BOLD")
             kl_infinity.next_to(axes_l, DOWN, buff=0.2)
 
             # --- Right panel: Sinkhorn distance ---
@@ -1759,7 +1772,7 @@ class Scene16KLvsSinkhorn(Scene):
             )
             axes_r.shift(RIGHT * 3.3 + DOWN * 0.3)
 
-            sink_header = Text("Sinkhorn Distance", font_size=22, color=C_B, weight="BOLD")
+            sink_header = Text("Sinkhorn Distance (Works)", font_size=20, color=C_B, weight="BOLD")
             sink_header.next_to(axes_r, UP, buff=0.2)
 
             source_sink = axes_r.plot(
@@ -1783,7 +1796,7 @@ class Scene16KLvsSinkhorn(Scene):
                     buff=0,
                 )
             ]
-            sink_value = Text("W_ε = finite", font_size=26, color=C_B, weight="BOLD")
+            sink_value = Text("W = finite (Sinkhorn stable)", font_size=26, color=C_B, weight="BOLD")
             sink_value.next_to(axes_r, DOWN, buff=0.2)
 
             divider = DashedLine(
@@ -1816,10 +1829,10 @@ class Scene16KLvsSinkhorn(Scene):
 
             # --- Comparison table ---
             table_items: List[Tuple[str, str, str]] = [
-                ("KL", "Diverges if no overlap", C_FLOW),
-                ("Sinkhorn", "Stable always", C_B),
-                ("KL", "Local (density-based)", C_FLOW),
-                ("Sinkhorn", "Global (geometry-based)", C_B),
+                ("KL Divergence", "Diverges when distributions don't overlap", C_FLOW),
+                ("Sinkhorn Distance", "Remains finite and stable", C_B),
+                ("KL Divergence", "Density-based measure", C_FLOW),
+                ("Sinkhorn Distance", "Geometry-based optimal transport", C_B),
             ]
             table_group: List[Text] = []
             for i, (name, desc, color) in enumerate(table_items):
@@ -1928,8 +1941,8 @@ class Scene17WassersteinGAN(Scene):
             self.wait(TM2)
 
             # --- Concluding note ---
-            conclusion = Text(
-                "SNO3 = implicit Wasserstein alignment -> stable training",
+            conclusion = MathTex(
+                r"\text{SNO3 = implicit Wasserstein alignment } \rightarrow \text{ stable training}",
                 font_size=18, color=C_MATCH,
             )
             conclusion.move_to(np.array([0.0, -2.6, 0.0]))

@@ -10,5 +10,5 @@ file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/me
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene14SinkhornConvergence/2766874850_2834709167_3376851516.mp4'
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene14SinkhornConvergence/2766874850_3162607015_4145838574.mp4'
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene14SinkhornConvergence/2766874850_2834709167_3436141355.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene14SinkhornConvergence/2766874850_1570319006_50257043.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene14SinkhornConvergence/2766874850_3366045169_3234132138.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene14SinkhornConvergence/2766874850_3922180875_1691906467.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene14SinkhornConvergence/2766874850_3366045169_1010725822.mp4'

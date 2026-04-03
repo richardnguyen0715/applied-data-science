@@ -4,5 +4,5 @@ file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/me
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene02CDRLandscape/2766874850_2834709167_2427294516.mp4'
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene02CDRLandscape/2766874850_3287813503_3772306156.mp4'
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene02CDRLandscape/2766874850_2834709167_1203598104.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene02CDRLandscape/2766874850_3512388960_1094371510.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene02CDRLandscape/2766874850_3366045169_2389237802.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene02CDRLandscape/2766874850_1012090370_1094371510.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene02CDRLandscape/2766874850_3366045169_1614142996.mp4'

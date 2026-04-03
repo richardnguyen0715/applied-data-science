@@ -8,5 +8,5 @@ file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/me
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene04LearningObjective/2766874850_4168821731_1077281024.mp4'
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene04LearningObjective/2766874850_2665759820_2689243609.mp4'
 file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene04LearningObjective/2766874850_2834709167_814885051.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene04LearningObjective/2766874850_1457212649_1288463838.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene04LearningObjective/2766874850_3366045169_3944603142.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene04LearningObjective/2766874850_687902396_1288463838.mp4'
+file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene04LearningObjective/2766874850_3366045169_2182651072.mp4'
