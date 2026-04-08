@@ -1,8 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene13EmbeddingSpace3D/4073662845_960006730_729892282.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene13EmbeddingSpace3D/4014682156_2530166899_3069978508.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene13EmbeddingSpace3D/3217874632_122772272_4047526248.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene13EmbeddingSpace3D/2230126626_3402799176_738060336.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene13EmbeddingSpace3D/1045682394_2384214301_99809424.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene13EmbeddingSpace3D/3593584354_3402799176_2369976368.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene13EmbeddingSpace3D/1777900825_1099396308_319248515.mp4'

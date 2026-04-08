@@ -209,3 +209,8 @@ __marimo__/
 
 # Folders
 open-source-contributing/
+
+# Video cache
+partial_movie_files/
+texts/
+Tex/

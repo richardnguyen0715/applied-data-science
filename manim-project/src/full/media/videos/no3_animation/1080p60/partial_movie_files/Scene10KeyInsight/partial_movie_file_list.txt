@@ -1,9 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene10KeyInsight/394216965_3616110451_223132457.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene10KeyInsight/2766874850_1257271043_3687897982.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene10KeyInsight/2766874850_3394500337_3781807672.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene10KeyInsight/2766874850_1322068672_2120071538.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene10KeyInsight/2766874850_3394500337_2627959071.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene10KeyInsight/2766874850_2515823623_2927936725.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene10KeyInsight/2766874850_3394500337_922667317.mp4'
-file 'file:/Users/tgng_mac/Coding/applied-data-science/manim-project/src/full/media/videos/no3_animation/1080p60/partial_movie_files/Scene10KeyInsight/2766874850_3366045169_2769935945.mp4'
