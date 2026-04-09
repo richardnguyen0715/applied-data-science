@@ -775,7 +775,7 @@ class Scene05HNO3(Scene):
             n_users: int = 5
             left_x: float = -2.8
             right_x: float = 2.8
-            y_positions: List[float] = [1.6, 0.8, 0.0, -0.8]
+            y_positions: List[float] = [1.2, 0.4, -0.4, -1.2]
 
             dots_a: List[Dot] = []
             dots_b: List[Dot] = []
@@ -784,9 +784,9 @@ class Scene05HNO3(Scene):
                 dots_b.append(Dot(np.array([right_x, y, 0.0]), radius=0.13, color=C_B))
 
             label_a = Text("Domain A", font_size=20, color=C_A)
-            label_a.move_to(np.array([left_x, 2.3, 0.0]))
+            label_a.move_to(np.array([left_x, 1.9, 0.0]))
             label_b = Text("Domain B", font_size=20, color=C_B)
-            label_b.move_to(np.array([right_x, 2.3, 0.0]))
+            label_b.move_to(np.array([right_x, 1.9, 0.0]))
 
             self.play(
                 LaggedStart(*[GrowFromCenter(d) for d in dots_a + dots_b], lag_ratio=0.1),
@@ -813,7 +813,7 @@ class Scene05HNO3(Scene):
                 font_size=32,
                 color=C_ACC
             )
-            algo_label.move_to(np.array([0.0, -1.5, 0.0]))
+            algo_label.move_to(np.array([0.0, -2, 0.0]))
 
             self.play(Write(algo_label), run_time=TW)
             self.wait(TM2)
@@ -1040,14 +1040,14 @@ class Scene08SinkhornIntuition(Scene):
 
             # --- Source distribution (left) - varying dot sizes = mass ---
             source_pos: List[Tuple[float, float, float]] = [
-                (-4.0, 1.3, 0.0), (-4.0, 0.1, 0.0), (-4.0, -1.05, 0.0),
+                (-4.0, 1.4, 0.0), (-4.0, 0.25, 0.0), (-4.0, -0.85, 0.0),
             ]
             source_radii: List[float] = [0.25, 0.40, 0.18]  # mass = size
 
             # --- Target distribution (right) ---
             target_pos: List[Tuple[float, float, float]] = [
-                (4.0, 1.8, 0.0), (4.0, 0.6, 0.0),
-                (4.0, -0.45, 0.0), (4.0, -1.4, 0.0),
+                (4.0, 1.95, 0.0), (4.0, 0.8, 0.0),
+                (4.0, -0.25, 0.0), (4.0, -1.2, 0.0),
             ]
             target_radii: List[float] = [0.20, 0.32, 0.15, 0.28]
 
@@ -1061,12 +1061,12 @@ class Scene08SinkhornIntuition(Scene):
             ]
 
             src_label = Text("Source Distribution", font_size=20, color=C_A)
-            src_label.move_to(np.array([-4.0, -2.25, 0.0]))
+            src_label.move_to(np.array([-4.0, -2.08, 0.0]))
             tgt_label = Text("Target Distribution", font_size=20, color=C_B)
-            tgt_label.move_to(np.array([4.0, -2.28, 0.0]))
+            tgt_label.move_to(np.array([4.0, -2.1, 0.0]))
 
             size_note = Text("Size = Mass Probability", font_size=20, color=C_ACC)
-            size_note.move_to(np.array([0.0, -2.28, 0.0]))
+            size_note.move_to(np.array([0.0, -2.1, 0.0]))
 
             self.play(
                 LaggedStart(*[GrowFromCenter(d) for d in source_dots], lag_ratio=0.2),
@@ -1094,7 +1094,7 @@ class Scene08SinkhornIntuition(Scene):
             ]
 
             flow_label = Text("Transport plan (Opacity = contribution)", font_size=20, color=C_FLOW)
-            flow_label.move_to(np.array([0.0, 2.5, 0.0]))
+            flow_label.move_to(np.array([0.0, 2.65, 0.0]))
 
             self.play(Write(flow_label), run_time=TW)
             self.play(
@@ -1215,8 +1215,8 @@ class Scene10KeyInsight(Scene):
             # --- Three insight cards ---
             insights: List[Tuple[str, str, str]] = [
                 ("No identity needed", C_A, "assets/target.png" ),
-                ("Preference is enough", C_B, "assets/target.png" ),
-                ("Soft matching wins", C_MATCH, "assets/accept.png" ),
+                ("Preference is enough", C_MATCH, "assets/target.png" ),
+                ("Soft matching wins", C_B, "assets/accept.png" ),
             ]
 
             cards: List[Group] = []
