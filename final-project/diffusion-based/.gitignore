@@ -40,7 +40,6 @@ env/
 *.ipynb
 
 # Data
-data/
 *.csv
 *.json
 

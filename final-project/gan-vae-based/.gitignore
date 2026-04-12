@@ -80,7 +80,6 @@ checkpoints/
 *.pth
 *.pt
 *.pkl
-data/
 *.cache
 
 # HuggingFace cache
