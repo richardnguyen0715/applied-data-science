@@ -68,23 +68,25 @@ def run_baseline_pipeline(config: PipelineConfig) -> dict:
     )
 
     # Create dataloaders
+    # Note: num_workers=0 required because HuggingFace datasets don't serialize
+    # correctly across multiprocessing boundaries
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.data.batch_size,
         shuffle=True,
-        num_workers=config.data.num_workers,
+        num_workers=0,
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=config.data.batch_size,
         shuffle=False,
-        num_workers=config.data.num_workers,
+        num_workers=0,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=config.data.batch_size,
         shuffle=False,
-        num_workers=config.data.num_workers,
+        num_workers=0,
     )
 
     # Create model

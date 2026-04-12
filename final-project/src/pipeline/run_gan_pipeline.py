@@ -71,11 +71,13 @@ def run_gan_pipeline(config: PipelineConfig) -> dict:
     )
 
     # Create dataloaders for GAN training
+    # Note: num_workers=0 required because HuggingFace datasets don't serialize
+    # correctly across multiprocessing boundaries
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.data.batch_size,
         shuffle=True,
-        num_workers=config.data.num_workers,
+        num_workers=0,
     )
 
     # Create GAN models
@@ -164,13 +166,13 @@ def run_gan_pipeline(config: PipelineConfig) -> dict:
         val_dataset,
         batch_size=config.data.batch_size,
         shuffle=False,
-        num_workers=config.data.num_workers,
+        num_workers=0,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=config.data.batch_size,
         shuffle=False,
-        num_workers=config.data.num_workers,
+        num_workers=0,
     )
 
     # Train classifier on combined data
