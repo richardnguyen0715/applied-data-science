@@ -59,7 +59,8 @@ def run_gan_pipeline(config: PipelineConfig) -> dict:
         image_size=config.data.image_size,
     )
 
-    train_targets = np.array([sample[1] for sample in train_dataset])
+    # Extract targets from raw dataset without transforms
+    train_targets = np.array(train_dataset.get_targets())
     fig_dir = output_dir / "figures"
 
     # Plot original distribution
@@ -135,7 +136,7 @@ def run_gan_pipeline(config: PipelineConfig) -> dict:
     )
 
     # Combine original and synthetic data
-    train_images = np.array([sample[0] for sample in train_dataset])
+    train_images, _ = train_dataset.get_images_and_targets()
     combined_images = np.vstack([train_images, synthetic_images])
     combined_labels = np.hstack([train_targets, synthetic_labels])
 

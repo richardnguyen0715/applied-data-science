@@ -55,7 +55,7 @@ def run_baseline_pipeline(config: PipelineConfig) -> dict:
     )
 
     # Extract targets for distribution analysis
-    train_targets = [sample[1] for sample in train_dataset]
+    train_targets = train_dataset.get_targets()
     logger_baseline.info(f"Train distribution: {sorted(set(train_targets))}")
 
     # Plot class distribution
