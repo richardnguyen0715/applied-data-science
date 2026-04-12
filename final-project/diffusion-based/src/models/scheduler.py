@@ -78,6 +78,30 @@ class NoiseScheduler:
             / (1.0 - self.alphas_cumprod)
         )
 
+    def to(self, device: torch.device) -> "NoiseScheduler":
+        """
+        Move all scheduler tensors to device.
+
+        Args:
+            device: Target device.
+
+        Returns:
+            Self (for chaining).
+        """
+        self.betas = self.betas.to(device)
+        self.alphas = self.alphas.to(device)
+        self.alphas_cumprod = self.alphas_cumprod.to(device)
+        self.alphas_cumprod_prev = self.alphas_cumprod_prev.to(device)
+        self.sqrt_alphas_cumprod = self.sqrt_alphas_cumprod.to(device)
+        self.sqrt_one_minus_alphas_cumprod = self.sqrt_one_minus_alphas_cumprod.to(device)
+        self.sqrt_recip_alphas_cumprod = self.sqrt_recip_alphas_cumprod.to(device)
+        self.sqrt_recipm1_alphas_cumprod = self.sqrt_recipm1_alphas_cumprod.to(device)
+        self.posterior_variance = self.posterior_variance.to(device)
+        self.posterior_log_variance_clipped = self.posterior_log_variance_clipped.to(device)
+        self.posterior_mean_coef1 = self.posterior_mean_coef1.to(device)
+        self.posterior_mean_coef2 = self.posterior_mean_coef2.to(device)
+        return self
+
     def add_noise(
         self,
         x_0: torch.Tensor,

@@ -201,6 +201,20 @@ class DiffusionModel(BaseModel):
         samples = torch.cat(all_samples, dim=0)
         return samples
 
+    def to(self, device: torch.device) -> "DiffusionModel":
+        """
+        Move model and scheduler to device.
+
+        Args:
+            device: Target device.
+
+        Returns:
+            Self (for chaining).
+        """
+        super().to(device)
+        self.scheduler.to(device)
+        return self
+
     def get_ema_model(self) -> nn.Module:
         """
         Get the EMA model.
