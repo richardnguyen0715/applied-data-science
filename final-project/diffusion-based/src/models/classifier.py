@@ -4,7 +4,9 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-import torchvision.models as modelsfrom torchvision.models import ResNet18_Weights
+import torchvision.models as models
+from torchvision.models import ResNet18_Weights
+
 from src.models.base import BaseModel
 
 
