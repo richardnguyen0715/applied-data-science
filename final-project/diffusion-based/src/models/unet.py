@@ -314,24 +314,44 @@ class UNet(nn.Module):
         self.up_convs = nn.ModuleList()
 
         for i in range(2):
-            up_channels = down_channels[-(i + 2)]
-            for _ in range(num_residual_blocks):
+            # Skip connection channels are encoder outputs in reverse: [256, 128]
+            skip_channels = down_channels[len(down_channels) - 1 - i]
+            # Decoder output channels reduce back down: [128, 64]
+            up_channels = down_channels[len(down_channels) - 2 - i]
+            
+            # First block at this level takes concatenated input
+            self.up_blocks.append(
+                ResidualBlock(
+                    current_channels + skip_channels,
+                    up_channels,
+                    time_embedding_dim,
+                    time_embedding_dim,
+                    dropout,
+                )
+            )
+            
+            # Subsequent blocks take previous block's output (up_channels)
+            for _ in range(num_residual_blocks - 1):
                 self.up_blocks.append(
                     ResidualBlock(
-                        current_channels + up_channels,
+                        up_channels,
                         up_channels,
                         time_embedding_dim,
                         time_embedding_dim,
                         dropout,
                     )
                 )
-                current_channels = up_channels
-
+            
+            # Create up_conv BEFORE updating current_channels
+            # up_conv takes output from previous level (or middle blocks) as input
             self.up_convs.append(
                 nn.ConvTranspose2d(
                     current_channels, current_channels, kernel_size=4, stride=2, padding=1
                 )
             )
+            
+            # NOW update current_channels to output of this level
+            current_channels = up_channels
 
         # Output
         self.final_norm = nn.GroupNorm(32, model_channels)
@@ -368,11 +388,14 @@ class UNet(nn.Module):
         # Initial convolution
         h = self.initial_conv(x)
 
-        # Encoder with skip connections
+        # Encoder with skip connections  
         skips = [h]
-        for block, conv in zip(self.down_blocks, self.down_convs):
-            h = block(h, time_emb, cond_emb)
-            skips.append(h)
+        block_idx = 0
+        for conv in self.down_convs:
+            for _ in range(self.num_residual_blocks):
+                h = self.down_blocks[block_idx](h, time_emb, cond_emb)
+                block_idx += 1
+            skips.append(h)  # Push skip only once per spatial level
             h = conv(h)
 
         # Middle blocks
@@ -381,9 +404,12 @@ class UNet(nn.Module):
 
         # Decoder
         up_block_idx = 0
-        for conv in self.up_convs:
+        for i, conv in enumerate(self.up_convs):
+            # Upsample first to match spatial resolution of skip
             h = conv(h)
+            # Then concatenate with skip connection from this level
             h = torch.cat([h, skips.pop()], dim=1)
+            # Apply residual blocks on concatenated input
             for _ in range(self.num_residual_blocks):
                 h = self.up_blocks[up_block_idx](h, time_emb, cond_emb)
                 up_block_idx += 1
