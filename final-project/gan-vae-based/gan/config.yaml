@@ -1,0 +1,35 @@
+classifier:
+  architecture: resnet18
+  epochs: 150
+  learning_rate: 0.001
+  momentum: 0.9
+  weight_decay: 0.0005
+data:
+  batch_size: 32
+  config_name: r-20
+  dataset_name: tomas-gajarsky/cifar10-lt
+  image_size: 32
+  num_workers: 4
+  val_split: 0.1
+device: cuda
+gan:
+  beta1: 0.5
+  beta2: 0.999
+  critic_iterations: 5
+  discriminator_hidden_dim: 128
+  epochs: 50
+  generator_hidden_dim: 128
+  latent_dim: 100
+  learning_rate: 0.0002
+  num_classes: 10
+output_dir: outputs
+oversampling_ratio: 1.0
+random_seed: 42
+vae:
+  decoder_hidden_dim: 256
+  encoder_hidden_dim: 256
+  epochs: 50
+  kld_weight: 0.00025
+  latent_dim: 64
+  learning_rate: 0.001
+  num_classes: 10
