@@ -26,6 +26,7 @@ def train_classifier(
     log_every_n_steps: int = 10,
     save_every_n_epochs: int = 10,
     gradient_clip_val: float = 0.0,
+    patience: int = 30,
 ) -> Dict[str, list]:
     """
     Train classifier model.
@@ -43,6 +44,7 @@ def train_classifier(
         log_every_n_steps: Log every n steps.
         save_every_n_epochs: Save checkpoint every n epochs.
         gradient_clip_val: Gradient clipping value.
+        patience: Early stopping patience (number of epochs without improvement before stopping).
 
     Returns:
         Dictionary with training history.
@@ -84,6 +86,9 @@ def train_classifier(
         "epoch": [],
     }
     best_val_acc = 0.0
+    best_val_loss = float('inf')
+    patience_counter = 0
+    best_epoch = 0
 
     for epoch in range(num_epochs):
         # Training phase
@@ -160,8 +165,11 @@ def train_classifier(
             val_acc = 100.0 * val_correct / val_total
 
             # Save best model
-            if checkpoint_dir is not None and val_acc > best_val_acc:
+            if checkpoint_dir is not None and val_loss < best_val_loss:
+                best_val_loss = val_loss
                 best_val_acc = val_acc
+                best_epoch = epoch + 1
+                patience_counter = 0
                 checkpoint_path = checkpoint_dir / "classifier_best.pt"
                 torch.save(
                     {
@@ -169,18 +177,30 @@ def train_classifier(
                         "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
                         "val_acc": val_acc,
+                        "val_loss": val_loss,
                     },
                     checkpoint_path,
                 )
                 logger.info(
-                    f"Best model saved to {checkpoint_path} | Val Acc: {val_acc:.2f}%"
+                    f"Best model saved to {checkpoint_path} | Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%"
                 )
+            else:
+                if val_loader is not None:
+                    patience_counter += 1
 
             logger.info(
                 f"Epoch {epoch + 1}/{num_epochs} | "
                 f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}% | "
                 f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%"
             )
+
+            # Check early stopping
+            if val_loader is not None and patience_counter >= patience:
+                logger.info(
+                    f"Early stopping triggered after {patience} epochs without improvement. "
+                    f"Best model at epoch {best_epoch} with val loss: {best_val_loss:.4f}"
+                )
+                break
 
             history["val_loss"].append(val_loss)
             history["val_acc"].append(val_acc)
@@ -208,6 +228,7 @@ def train_classifier(
                 },
                 checkpoint_path,
             )
+            logger.info(f"Checkpoint saved to {checkpoint_path}")
 
-    logger.info("Training completed!")
+    logger.info(f"Training completed! Early stopping: {patience_counter >= patience if val_loader else 'N/A'}")
     return history

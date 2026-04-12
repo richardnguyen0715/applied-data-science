@@ -3,6 +3,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from torchvision.models import ResNet18_Weights
 
 
 class SimpleConvNet(nn.Module):
@@ -80,7 +81,8 @@ def create_classifier(
         ValueError: If architecture is unknown.
     """
     if architecture == "resnet18":
-        model = models.resnet18(pretrained=pretrained)
+        weights = ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
+        model = models.resnet18(weights=weights)
         # Modify first conv layer for 32x32 images (no stride in conv1)
         model.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         # Replace final classification layer

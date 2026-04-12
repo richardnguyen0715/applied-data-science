@@ -24,6 +24,7 @@ def train_diffusion(
     log_every_n_steps: int = 10,
     save_every_n_epochs: int = 10,
     gradient_clip_val: float = 1.0,
+    patience: int = 20,
 ) -> Dict[str, list]:
     """
     Train diffusion model.
@@ -39,6 +40,7 @@ def train_diffusion(
         log_every_n_steps: Log every n steps.
         save_every_n_epochs: Save checkpoint every n epochs.
         gradient_clip_val: Gradient clipping value.
+        patience: Early stopping patience (number of epochs without improvement before stopping).
 
     Returns:
         Dictionary with training history.
@@ -69,6 +71,9 @@ def train_diffusion(
     # Training loop
     history = {"loss": [], "epoch": []}
     global_step = 0
+    best_loss = float('inf')
+    patience_counter = 0
+    best_epoch = 0
 
     for epoch in range(num_epochs):
         model.train()
@@ -138,6 +143,32 @@ def train_diffusion(
             f"Average Loss: {avg_epoch_loss:.4f}"
         )
 
+        # Save best model and check early stopping
+        if avg_epoch_loss < best_loss:
+            best_loss = avg_epoch_loss
+            best_epoch = epoch + 1
+            patience_counter = 0
+            if checkpoint_dir is not None:
+                checkpoint_path = checkpoint_dir / "diffusion_best.pt"
+                torch.save(
+                    {
+                        "epoch": epoch + 1,
+                        "model_state_dict": model.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                        "loss": avg_epoch_loss,
+                    },
+                    checkpoint_path,
+                )
+                logger.info(f"Best model saved to {checkpoint_path} | Loss: {avg_epoch_loss:.4f}")
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                logger.info(
+                    f"Early stopping triggered after {patience} epochs without improvement. "
+                    f"Best model at epoch {best_epoch} with loss: {best_loss:.4f}"
+                )
+                break
+
         # Save checkpoint
         if checkpoint_dir is not None and (epoch + 1) % save_every_n_epochs == 0:
             checkpoint_path = checkpoint_dir / f"diffusion_epoch_{epoch + 1}.pt"
@@ -152,5 +183,5 @@ def train_diffusion(
             )
             logger.info(f"Checkpoint saved to {checkpoint_path}")
 
-    logger.info("Training completed!")
+    logger.info(f"Training completed! Early stopping: {patience_counter >= patience}")
     return history

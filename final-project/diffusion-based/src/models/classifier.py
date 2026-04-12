@@ -5,6 +5,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from torchvision.models import ResNet18_Weights
 
 from src.models.base import BaseModel
 
@@ -23,7 +24,8 @@ class ResNet18Classifier(BaseModel):
         super().__init__()
 
         # Load ResNet18
-        self.model = models.resnet18(pretrained=pretrained)
+        weights = ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
+        self.model = models.resnet18(weights=weights)
 
         # Modify for CIFAR-10
         self.model.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)

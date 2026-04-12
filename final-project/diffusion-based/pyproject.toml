@@ -42,7 +42,6 @@ version = "1.0.0"
 description = "Diffusion-based oversampling for handling imbalanced CIFAR-10-LT data"
 authors = ["ML Researcher <researcher@example.com>"]
 readme = "README.md"
-pakage-mode=false
 
 [tool.poetry.dependencies]
 python = "^3.10"
