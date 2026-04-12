@@ -45,6 +45,7 @@ class GANTrainer:
         self.beta2 = config.get('beta2', 0.999)
         self.epochs = config.get('epochs', 50)
         self.critic_iterations = config.get('critic_iterations', 5)
+        self.patience = config.get('patience', 10)  # Early stopping patience
 
         # Optimizers
         self.g_optimizer = torch.optim.Adam(
@@ -64,6 +65,9 @@ class GANTrainer:
         # Metrics
         self.d_losses = []
         self.g_losses = []
+        self.best_g_loss = float('inf')
+        self.best_epoch = 0
+        self.patience_counter = 0
 
     def train(self, train_loader: DataLoader) -> None:
         """
@@ -127,6 +131,7 @@ class GANTrainer:
             train_loader: Training dataloader.
         """
         logger.info(f"Starting GAN training for {self.epochs} epochs")
+        logger.info(f"Early stopping patience: {self.patience} epochs")
 
         for epoch in tqdm(range(self.epochs), desc="GAN Training", unit="epoch"):
             self.train(train_loader)
@@ -136,18 +141,36 @@ class GANTrainer:
             avg_g_loss = sum(self.g_losses[-len(train_loader):]) / len(train_loader)
             logger.info(f"Epoch {epoch + 1}/{self.epochs} - D Loss: {avg_d_loss:.4f}, G Loss: {avg_g_loss:.4f}")
 
+            # Save best model and check early stopping based on G loss
+            if avg_g_loss < self.best_g_loss:
+                self.best_g_loss = avg_g_loss
+                self.best_epoch = epoch + 1
+                self.patience_counter = 0
+                if self.checkpoint_dir is not None:
+                    self.save_checkpoint(epoch, is_best=True)
+                logger.info(f"Best model updated with G loss: {avg_g_loss:.4f}")
+            else:
+                self.patience_counter += 1
+                if self.patience_counter >= self.patience:
+                    logger.info(
+                        f"Early stopping triggered after {self.patience} epochs without improvement. "
+                        f"Best model at epoch {self.best_epoch} with G loss: {self.best_g_loss:.4f}"
+                    )
+                    break
+
             # Save checkpoint
             if self.checkpoint_dir is not None:
-                self.save_checkpoint(epoch)
+                self.save_checkpoint(epoch, is_best=False)
 
         logger.info("GAN training completed")
 
-    def save_checkpoint(self, epoch: int) -> None:
+    def save_checkpoint(self, epoch: int, is_best: bool = False) -> None:
         """
         Save model checkpoint.
 
         Args:
             epoch: Current epoch.
+            is_best: Whether this is the best model.
         """
         if self.checkpoint_dir is None:
             return
@@ -162,7 +185,8 @@ class GANTrainer:
             'd_optimizer_state': self.d_optimizer.state_dict(),
         }
 
-        checkpoint_path = self.checkpoint_dir / f"gan_epoch_{epoch}.pt"
+        filename = "gan_best.pt" if is_best else f"gan_epoch_{epoch}.pt"
+        checkpoint_path = self.checkpoint_dir / filename
         torch.save(checkpoint, checkpoint_path)
         logger.info(f"Checkpoint saved to {checkpoint_path}")
 
