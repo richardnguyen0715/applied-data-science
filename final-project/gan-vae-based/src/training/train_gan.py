@@ -7,6 +7,7 @@ from typing import Optional
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from src.training.losses import GANLoss
 
@@ -74,7 +75,8 @@ class GANTrainer:
         self.generator.train()
         self.discriminator.train()
 
-        for batch_idx, (real_images, labels) in enumerate(train_loader):
+        progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), desc="Training")
+        for batch_idx, (real_images, labels) in progress_bar:
             real_images = real_images.to(self.device)
             labels = labels.to(self.device)
             batch_size = real_images.size(0)
@@ -109,15 +111,13 @@ class GANTrainer:
             g_loss.backward()
             self.g_optimizer.step()
 
-            # Log metrics
-            if batch_idx % 50 == 0:
-                logger.info(
-                    f"Batch {batch_idx}/{len(train_loader)} | "
-                    f"D Loss: {d_loss.item():.4f} | G Loss: {g_loss.item():.4f}"
-                )
-
+            # Update progress bar with metrics
             self.d_losses.append(d_loss.item())
             self.g_losses.append(g_loss.item())
+            progress_bar.set_postfix({
+                'D_loss': f'{d_loss.item():.4f}',
+                'G_loss': f'{g_loss.item():.4f}'
+            })
 
     def fit(self, train_loader: DataLoader) -> None:
         """
@@ -128,14 +128,13 @@ class GANTrainer:
         """
         logger.info(f"Starting GAN training for {self.epochs} epochs")
 
-        for epoch in range(self.epochs):
-            logger.info(f"Epoch {epoch + 1}/{self.epochs}")
+        for epoch in tqdm(range(self.epochs), desc="GAN Training", unit="epoch"):
             self.train(train_loader)
 
             # Log epoch metrics
             avg_d_loss = sum(self.d_losses[-len(train_loader):]) / len(train_loader)
             avg_g_loss = sum(self.g_losses[-len(train_loader):]) / len(train_loader)
-            logger.info(f"Epoch {epoch + 1} - D Loss: {avg_d_loss:.4f}, G Loss: {avg_g_loss:.4f}")
+            logger.info(f"Epoch {epoch + 1}/{self.epochs} - D Loss: {avg_d_loss:.4f}, G Loss: {avg_g_loss:.4f}")
 
             # Save checkpoint
             if self.checkpoint_dir is not None:

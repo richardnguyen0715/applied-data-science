@@ -7,6 +7,7 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ class ClassifierTrainer:
         self.epochs = config.get('epochs', 100)
         self.momentum = config.get('momentum', 0.9)
         self.weight_decay = config.get('weight_decay', 5e-4)
+        self.patience = config.get('patience', 20)  # Early stopping patience
 
         # Optimizer
         self.optimizer = torch.optim.SGD(
@@ -61,6 +63,9 @@ class ClassifierTrainer:
         self.train_accs = []
         self.val_losses = []
         self.val_accs = []
+        self.best_val_loss = float('inf')
+        self.best_epoch = 0
+        self.patience_counter = 0
 
     def train_epoch(self, train_loader: DataLoader) -> Tuple[float, float]:
         """
@@ -77,7 +82,8 @@ class ClassifierTrainer:
         correct = 0
         total = 0
 
-        for batch_idx, (images, labels) in enumerate(train_loader):
+        progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), desc="Training", leave=False)
+        for batch_idx, (images, labels) in progress_bar:
             images = images.to(self.device)
             labels = labels.to(self.device)
 
@@ -96,12 +102,11 @@ class ClassifierTrainer:
             correct += predicted.eq(labels).sum().item()
             total += labels.size(0)
 
-            if batch_idx % 50 == 0:
-                logger.info(
-                    f"Batch {batch_idx}/{len(train_loader)} | "
-                    f"Loss: {loss.item():.4f} | "
-                    f"Acc: {100. * correct / total:.2f}%"
-                )
+            # Update progress bar
+            progress_bar.set_postfix({
+                'loss': f'{loss.item():.4f}',
+                'acc': f'{100. * correct / total:.2f}%'
+            })
 
         avg_loss = total_loss / len(train_loader)
         avg_acc = correct / total
@@ -123,8 +128,9 @@ class ClassifierTrainer:
         correct = 0
         total = 0
 
+        progress_bar = tqdm(val_loader, desc="Validating", leave=False)
         with torch.no_grad():
-            for images, labels in val_loader:
+            for images, labels in progress_bar:
                 images = images.to(self.device)
                 labels = labels.to(self.device)
 
@@ -135,6 +141,12 @@ class ClassifierTrainer:
                 _, predicted = outputs.max(1)
                 correct += predicted.eq(labels).sum().item()
                 total += labels.size(0)
+                
+                # Update progress bar
+                progress_bar.set_postfix({
+                    'loss': f'{loss.item():.4f}',
+                    'acc': f'{100. * correct / total:.2f}%'
+                })
 
         avg_loss = total_loss / len(val_loader)
         avg_acc = correct / total
@@ -154,11 +166,10 @@ class ClassifierTrainer:
             val_loader: Validation dataloader.
         """
         logger.info(f"Starting classifier training for {self.epochs} epochs")
+        logger.info(f"Early stopping patience: {self.patience} epochs")
         best_val_acc = 0.0
 
-        for epoch in range(self.epochs):
-            logger.info(f"Epoch {epoch + 1}/{self.epochs}")
-
+        for epoch in tqdm(range(self.epochs), desc="Classifier Training", unit="epoch"):
             # Train
             train_loss, train_acc = self.train_epoch(train_loader)
             self.train_losses.append(train_loss)
@@ -171,16 +182,27 @@ class ClassifierTrainer:
 
             # Log
             logger.info(
-                f"Epoch {epoch + 1} - "
+                f"Epoch {epoch + 1}/{self.epochs} - "
                 f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f} | "
                 f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}"
             )
 
-            # Save best model
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
+            # Save best model and check early stopping
+            if val_loss < self.best_val_loss:
+                self.best_val_loss = val_loss
+                self.best_epoch = epoch + 1
+                self.patience_counter = 0
                 if self.checkpoint_dir is not None:
                     self.save_checkpoint(epoch, is_best=True)
+                logger.info(f"Best model updated with val loss: {val_loss:.4f}")
+            else:
+                self.patience_counter += 1
+                if self.patience_counter >= self.patience:
+                    logger.info(
+                        f"Early stopping triggered after {self.patience} epochs without improvement. "
+                        f"Best model at epoch {self.best_epoch} with val loss: {self.best_val_loss:.4f}"
+                    )
+                    break
 
             # Update learning rate
             self.scheduler.step()
