@@ -29,9 +29,14 @@ from typing import List, Tuple
 import numpy as np
 from loguru import logger
 from manim import (
+    ChangingDecimal,
+    Integer,
+    ImageMobject,
+    MathTex,
     Scene,
     ThreeDScene,
     Circle,
+    Square,
     Dot,
     Dot3D,
     Line,
@@ -39,7 +44,9 @@ from manim import (
     DashedLine,
     DoubleArrow,
     Text,
+    Tex,
     MathTex,
+    Group,
     VGroup,
     Axes,
     ThreeDAxes,
@@ -63,6 +70,10 @@ from manim import (
     DEGREES,
     PI,
     TAU,
+    UL,
+    UR,
+    DL,    
+    DR,
     config,
     Rectangle,
     SurroundingRectangle,
@@ -112,7 +123,7 @@ C_FLOW: str = "#EF4444"    # Flow      - Red
 C_TEXT: str = "#F1F5F9"    # Main text - near white
 C_ACC: str = "#A78BFA"     # Accent    - purple
 C_LOSS: str = "#F97316"    # Loss      - orange
-C_SOFT: str = "#475569"    # Soft link - slate gray
+C_SOFT: str = "#6C819F"    # Soft link - slate gray
 
 # ============================================================
 # TIMING CONSTANTS (seconds)
@@ -127,7 +138,6 @@ TL: float = 1.5   # Long wait
 # ============================================================
 # SHARED HELPER FUNCTIONS
 # ============================================================
-
 
 def set_background(scene: Scene) -> None:
     """
@@ -155,11 +165,11 @@ def make_title(title: str, subtitle: str = "") -> VGroup:
         VGroup containing the title (and subtitle if provided).
     """
     logger.debug(f"make_title: '{title}'")
-    t = Text(title, font_size=30, color=C_TEXT, weight="BOLD")
-    t.to_edge(UP, buff=0.25)
+    t = Text(title, font_size=30, color=C_TEXT, weight="BOLD", font="Serif")
+    t.to_edge(UP, buff=0.4)
     if subtitle:
-        s = Text(subtitle, font_size=20, color=C_ACC)
-        s.next_to(t, DOWN, buff=0.1)
+        s = Text(subtitle, font_size=24, color=C_ACC, font="Calibri")
+        s.next_to(t, DOWN, buff=0.15)
         return VGroup(t, s)
     return VGroup(t)
 
@@ -219,8 +229,8 @@ def make_platform(
         radius=radius, color=color, fill_opacity=0.07, stroke_width=2.5
     )
     circle.move_to(position)
-    text = Text(label, font_size=20, color=color)
-    text.next_to(circle, UP, buff=0.15)
+    text = Text(label, font_size=20, color=color, font="Sans")
+    text.next_to(circle, UP, buff=0.25)
     return circle, text
 
 
@@ -238,13 +248,19 @@ def make_insight_box(text: str, width: float = 7.0) -> VGroup:
     logger.debug(f"make_insight_box: '{text}'")
     label = Text(
         text,
-        font="Comic Sans MS",
-        font_size=18,
-        color=C_ACC
+        font="Sans",
+        font_size=20,
+        color="#000000",
+        weight="BOLD",
     )
-    box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
+    box = SurroundingRectangle(label, color=C_LOSS, buff=0.25, corner_radius=0.1)
+    box.set_fill(
+        color=C_LOSS,   
+        opacity=1.0,
+    )
+
     group = VGroup(box, label)
-    group.to_edge(DOWN, buff=0.3)
+    group.to_edge(DOWN, buff=0.5)
     return group
 
 
@@ -287,35 +303,33 @@ class Scene01DataFragmentation(Scene):
             self.wait(TS)
 
             # --- User dots inside each platform ---
-            dots_a: List[Dot] = make_user_dots(pos_a, 1.7, 6, C_A, seed=1)
-            dots_b: List[Dot] = make_user_dots(pos_b, 1.7, 6, C_B, seed=2)
+            dots_a: List[Dot] = make_user_dots(pos_a, 1.8, 8, C_A, seed=5)
+            dots_b: List[Dot] = make_user_dots(pos_b, 1.8, 8, C_B, seed=7)
 
             self.play(
-                LaggedStart(
-                    *[GrowFromCenter(d) for d in dots_a + dots_b],
-                    lag_ratio=0.15,
-                ),
+                LaggedStart(*[GrowFromCenter(d) for d in dots_a], lag_ratio=0.5),
+                LaggedStart(*[GrowFromCenter(d) for d in dots_b], lag_ratio=0.5),
                 run_time=TM,
             )
             self.wait(TM2)
 
             # --- Highlight separation: show dashed barrier in the middle ---
             barrier = DashedLine(
-                start=np.array([0.0, 2.5, 0.0]),
-                end=np.array([0.0, -2.5, 0.0]),
+                start=np.array([0.0, 2.2, 0.0]),
+                end=np.array([0.0, -2.2, 0.0]),
                 color=C_FLOW,
                 dash_length=0.15,
-                stroke_width=2,
+                stroke_width=3,
             )
-            barrier_label = Text("No Connection", font_size=18, color=C_FLOW)
-            barrier_label.next_to(barrier, RIGHT, buff=0.15)
+            barrier_label = Text("No Connection", font_size=20, color=C_FLOW, font="Sans")
+            barrier_label.next_to(barrier, UP, buff=0.25)
 
             self.play(Create(barrier), Write(barrier_label), run_time=TW)
             self.wait(TM2)
 
             # --- Insight ---
             insight = make_insight_box(
-                "Result: data sparsity + cold-start problem"
+                "Result: Data sparsity & Cold-start problem"
             )
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
@@ -339,7 +353,6 @@ class Scene02CDRLandscape(Scene):
     """
 
     def construct(self) -> None:
-        """Build and animate Scene 02."""
         try:
             logger.info("Scene02CDRLandscape.construct: start")
             set_background(self)
@@ -347,47 +360,82 @@ class Scene02CDRLandscape(Scene):
             title = make_title("Cross-Domain Recommendation Landscape")
             self.play(FadeIn(title), run_time=TF)
 
-            # --- Three cases laid out horizontally ---
-            cases: List[VGroup] = []
-            case_data = [
-                ("User Overlap", C_A, True, False),
-                ("Item Overlap", C_B, False, True),
-                ("No Overlap", C_FLOW, False, False),
+            # Case specifications (LaTeX formatted)
+            case_specs = [
+                ("User Overlap", C_A, True, False, r"U^1 \cap U^2 \neq \emptyset"),
+                ("Item Overlap", C_B, False, True, r"I^1 \cap I^2 \neq \emptyset"),
+                ("User + Item Overlap", C_MATCH, True, True,
+                r"U^1 \cap U^2 \neq \emptyset \land I^1 \cap I^2 \neq \emptyset"),
+                ("No Overlap", C_FLOW, False, False,
+                r"U^1 \cap U^2 = \emptyset \land I^1 \cap I^2 = \emptyset"),
             ]
-            x_positions: List[float] = [-4.2, 0.0, 4.2]
 
-            for i, ((case_label, case_color, user_ov, item_ov), x_pos) in enumerate(
-                zip(case_data, x_positions)
-            ):
-                case_group = self._build_case_visual(
-                    case_label, case_color, x_pos, user_ov, item_ov
+            # Stage 1: Show three overlap cases
+            x_pos_3 = [-4.8, 0, 4.8]
+            first_three = VGroup()
+            for i in range(3):
+                s = case_specs[i]
+                first_three.add(
+                    self._build_case_visual(s[0], s[1], x_pos_3[i], s[2], s[3], s[4])
                 )
-                cases.append(case_group)
+
+            self.play(LaggedStart(*[FadeIn(c) for c in first_three], lag_ratio=1), run_time=3)
+            self.wait(2)
+
+            # Stage 2: Fade out to focus on No Overlap
+            self.play(FadeOut(first_three), run_time=1.5)
+
+            # Stage 3: Show No Overlap at center
+            s_no = case_specs[3]
+            no_overlap_case = self._build_case_visual(
+                s_no[0], s_no[1], 0, s_no[2], s_no[3], s_no[4]
+            )
+
+            self.play(FadeIn(no_overlap_case), run_time=1.5)
+
+            # Highlight box
+            h_box = SurroundingRectangle(
+                no_overlap_case, color=C_FLOW, buff=0.3, stroke_width=3
+            )
+
+            # Target label
+            target_label = Text(
+                "Our target setting",
+                font_size=20,
+                color=C_FLOW,
+                weight="BOLD",
+                font="Sans"
+            )
+
+            shift_vec = LEFT * 1.8
+
+            # Position label based on final shifted layout
+            target_label.next_to(
+                no_overlap_case.copy().shift(shift_vec), RIGHT, buff=1
+            )
+
+            group_left = VGroup(no_overlap_case, h_box)
 
             self.play(
-                LaggedStart(*[FadeIn(c) for c in cases], lag_ratio=0.35),
-                run_time=TM,
+                group_left.animate.shift(shift_vec),
+                FadeIn(target_label),
+                run_time=1.5
             )
-            self.wait(TM2)
 
-            # --- Zoom emphasis on Case 3 (no overlap) ---
-            highlight_box = SurroundingRectangle(
-                cases[2], color=C_FLOW, buff=0.15, stroke_width=3
+            self.wait(1.5)
+
+            insight = make_insight_box(
+                "Hardest Scenario: No shared information between domains"
             )
-            focus_label = Text("Our target setting", font_size=20, color=C_FLOW)
-            focus_label.next_to(highlight_box, DOWN, buff=0.2)
+            self.play(FadeIn(insight))
+            self.wait(3)
 
-            self.play(Create(highlight_box), Write(focus_label), run_time=TW)
-            self.wait(TM2)
-
-            insight = make_insight_box("Most methods assume overlap - this paper tackles the hardest case")
-            self.play(FadeIn(insight), run_time=TF)
-            self.wait(TL)
             logger.info("Scene02CDRLandscape.construct: done")
 
         except Exception as exc:
             logger.error(f"Scene02 failed: {exc}")
             raise
+
 
     def _build_case_visual(
         self,
@@ -396,65 +444,102 @@ class Scene02CDRLandscape(Scene):
         x_center: float,
         user_overlap: bool,
         item_overlap: bool,
+        formula: str = ""
     ) -> VGroup:
-        """
-        Build a single CDR case visualization column.
 
-        Args:
-            label:        Case label text.
-            color:        Primary color for this case.
-            x_center:     Horizontal center position.
-            user_overlap: Whether to draw user-overlap lines.
-            item_overlap: Whether to draw item-overlap lines.
-
-        Returns:
-            VGroup with all elements for this case.
-        """
-        logger.debug(f"_build_case_visual: '{label}' at x={x_center}")
-        elements: List = []
+        elements = []
 
         # Case title
-        case_title = Text(label, font_size=16, color=color)
-        case_title.move_to(np.array([x_center, 2.0, 0.0]))
+        case_title = Text(
+            label, font_size=20, color=color, weight="BOLD", font="Sans"
+        )
+        case_title.move_to(np.array([x_center, 2.4, 0.0]))
         elements.append(case_title)
 
-        # Left mini-circle (Domain A)
-        c_left = Circle(radius=0.6, color=C_A, fill_opacity=0.08, stroke_width=1.5)
-        c_left.move_to(np.array([x_center - 0.75, 0.5, 0.0]))
-        elements.append(c_left)
+        # Origin and axes
+        origin = np.array([x_center - 1.2, 1.55, 0.0])
+        size = 1.2
 
-        # Right mini-circle (Domain B)
-        c_right = Circle(radius=0.6, color=C_B, fill_opacity=0.08, stroke_width=1.5)
-        c_right.move_to(np.array([x_center + 0.75, 0.5, 0.0]))
-        elements.append(c_right)
+        ax_y = Arrow(
+            origin,
+            origin + DOWN * (size * 2 + 0.5),
+            buff=0,
+            stroke_width=2,
+            tip_length=0.15
+        )
+        ax_x = Arrow(
+            origin,
+            origin + RIGHT * (size * 2 + 0.5),
+            buff=0,
+            stroke_width=2,
+            tip_length=0.15
+        )
+        elements.extend([ax_y, ax_x])
 
-        # Dots inside circles
-        for dx in [-0.25, 0.1]:
-            d = Dot(np.array([x_center - 0.75 + dx, 0.5, 0.0]), radius=0.07, color=C_A)
-            elements.append(d)
-        for dx in [-0.1, 0.25]:
-            d = Dot(np.array([x_center + 0.75 + dx, 0.5, 0.0]), radius=0.07, color=C_B)
-            elements.append(d)
+        # Domain 1
+        d1 = Square(
+            side_length=size, color=C_A, fill_opacity=0.2, stroke_width=2.5
+        )
+        d1.move_to(origin, aligned_edge=UL)
 
-        # Overlap connections if required
-        if user_overlap:
-            line = Line(
-                np.array([x_center - 0.1, 0.5, 0.0]),
-                np.array([x_center + 0.1, 0.5, 0.0]),
-                color=C_MATCH, stroke_width=2,
+        d1_text = MathTex(
+            r"\mathcal{D}^1", color=C_A, font_size=34
+        ).move_to(d1.get_center())
+
+        u1_lab = MathTex(r"U^1", font_size=34).next_to(d1, LEFT, buff=0.15)
+        i1_lab = MathTex(r"I^1", font_size=34).next_to(d1, UP, buff=0.15)
+
+        elements.extend([d1, d1_text, u1_lab, i1_lab])
+
+        # Domain 2 position
+        if user_overlap and not item_overlap:
+            d2_offset = RIGHT * size + DOWN * (size * 0.7)
+        elif item_overlap and not user_overlap:
+            d2_offset = DOWN * size + RIGHT * (size * 0.7)
+        elif user_overlap and item_overlap:
+            d2_offset = RIGHT * (size * 0.7) + DOWN * (size * 0.7)
+        else:
+            d2_offset = RIGHT * (size * 1.1) + DOWN * (size * 1.1)
+
+        d2_origin = origin + d2_offset
+
+        d2 = Square(
+            side_length=size, color=C_B, fill_opacity=0.2, stroke_width=2.5
+        )
+        d2.move_to(d2_origin, aligned_edge=UL)
+
+        d2_text = MathTex(
+            r"\mathcal{D}^2", color=C_B, font_size=34
+        ).move_to(d2.get_center())
+
+        elements.extend([d2, d2_text])
+
+        # Labels for Domain 2
+        if user_overlap and not item_overlap:
+            u2_lab = MathTex(r"U^2", font_size=34).next_to(d2, RIGHT, buff=0.15)
+            i2_lab = MathTex(r"I^2", font_size=34).next_to(
+                d2, UP, buff=0.15 + size * 0.7
             )
-            elements.append(line)
 
-        if item_overlap:
-            line = Line(
-                np.array([x_center - 0.75, 0.1, 0.0]),
-                np.array([x_center + 0.75, 0.1, 0.0]),
-                color=C_MATCH, stroke_width=2, stroke_opacity=0.6,
+        elif item_overlap and not user_overlap:
+            u2_lab = MathTex(r"U^2", font_size=34).next_to(
+                d2, LEFT, buff=0.15 + size * 0.7
             )
-            elements.append(line)
+            i2_lab = MathTex(r"I^2", font_size=34).next_to(d2, DOWN, buff=0.15)
+
+        else:
+            u2_lab = MathTex(r"U^2", font_size=34).next_to(d2, RIGHT, buff=0.15)
+            i2_lab = MathTex(r"I^2", font_size=34).next_to(d2, DOWN, buff=0.15)
+
+        elements.extend([u2_lab, i2_lab])
+
+        # Formula
+        if formula:
+            f_math = MathTex(formula, font_size=34, color=color)
+            f_math.move_to(np.array([x_center, -1.9, 0.0]))
+            elements.append(f_math)
 
         return VGroup(*elements)
-
 
 # ============================================================
 # SCENE 03 - NO3 SETTING
@@ -479,16 +564,30 @@ class Scene03NO3Setting(Scene):
             self.wait(TS)
 
             # --- Three constraint bullets ---
-            constraints: List[Text] = [
-                Text("No user overlap", font_size=32, color=C_TEXT),
-                Text("No item overlap", font_size=32, color=C_TEXT),
-                Text("No side information", font_size=32, color=C_TEXT),
-            ]
-            for i, c in enumerate(constraints):
-                c.move_to(np.array([0.0, 1.0 - i * 1.2, 0.0]))
+            icon_path = "assets/remove.png" 
 
-            for c in constraints:
-                self.play(Write(c), run_time=TW)
+            constraints: List[Group] = []
+
+            texts = [
+                "No user overlap",
+                "No item overlap",
+                "No side information",
+            ]
+
+            for i, txt in enumerate(texts):
+                text = Text(txt, font_size=32, color=C_TEXT)
+
+                icon = ImageMobject(icon_path).scale(0.15)
+                icon.next_to(text, LEFT, buff=0.3)
+
+                group = Group(icon, text)
+
+                group.move_to(np.array([0.0, 1.0 - i * 1.2, 0.0]))
+                constraints.append(group)
+
+            # Animate
+            for g in constraints:
+                self.play(FadeIn(g, shift=RIGHT * 0.3), run_time=TW)
                 self.wait(TS)
 
             self.wait(TM2)
@@ -549,49 +648,68 @@ class Scene04LearningObjective(Scene):
 
             # --- Domain boxes ---
             d1_box = Rectangle(width=1.6, height=0.8, color=C_A, fill_opacity=0.15)
-            d1_box.move_to(np.array([-4.0, 0.5, 0.0]))
-            d1_label = Text("D1", color=C_A, font_size=36, weight="BOLD")
-            d1_label.move_to(d1_box.get_center())
+            d1_box.move_to(np.array([-4.5, 0.6, 0.0]))
 
             d2_box = Rectangle(width=1.6, height=0.8, color=C_B, fill_opacity=0.15)
-            d2_box.move_to(np.array([-4.0, -0.8, 0.0]))
-            d2_label = Text("D2", color=C_B, font_size=36, weight="BOLD")
-            d2_label.move_to(d2_box.get_center())
+            d2_box.move_to(np.array([-4.5, -0.8, 0.0]))
 
             # --- Loss boxes ---
             l1_box = Rectangle(width=1.6, height=0.8, color=C_A, fill_opacity=0.15)
-            l1_box.move_to(np.array([0.0, 0.5, 0.0]))
-            l1_label = Text("L1", color=C_A, font_size=36, weight="BOLD")
-            l1_label.move_to(l1_box.get_center())
+            l1_box.move_to(np.array([-1, 0.6, 0.0]))
 
             l2_box = Rectangle(width=1.6, height=0.8, color=C_B, fill_opacity=0.15)
-            l2_box.move_to(np.array([0.0, -0.8, 0.0]))
-            l2_label = Text("L2", color=C_B, font_size=36, weight="BOLD")
+            l2_box.move_to(np.array([-1, -0.8, 0.0]))
+            
+            # --- Domain labels (MathTex) ---
+            d1_label = MathTex("D_1", color=C_A)
+            d1_label.move_to(d1_box.get_center())
+
+            d2_label = MathTex("D_2", color=C_B)
+            d2_label.move_to(d2_box.get_center())
+
+            # --- Loss labels (MathTex) ---
+            l1_label = MathTex("L_1", color=C_A)
+            l1_label.move_to(l1_box.get_center())
+
+            l2_label = MathTex("L_2", color=C_B)
             l2_label.move_to(l2_box.get_center())
+
+            # --- Total box and label ---
+            l_total_box = Rectangle(
+                width=3.2, height=1,
+                color=C_MATCH,
+                fill_opacity=0.15,
+            )
+            l_total_box.move_to(np.array([3.5, -0.1, 0.0]))
+
+            l_total = MathTex("L = L_1 + L_2", color=C_MATCH)
+            l_total.move_to(l_total_box.get_center())
 
             # --- Arrows D -> L ---
             arr1 = Arrow(
-                start=np.array([-3.2, 0.5, 0.0]),
-                end=np.array([-0.8, 0.5, 0.0]),
+                start=np.array([-3.7, 0.6, 0.0]),
+                end=np.array([-1.8, 0.6, 0.0]),
                 color=C_A, buff=0,
             )
             arr2 = Arrow(
-                start=np.array([-3.2, -0.8, 0.0]),
-                end=np.array([-0.8, -0.8, 0.0]),
+                start=np.array([-3.7, -0.8, 0.0]),
+                end=np.array([-1.8, -0.8, 0.0]),
                 color=C_B, buff=0,
             )
 
-            # --- Final combined loss ---
-            l_total = Text(
-                "L = L1 + L2",
-                color=C_TEXT, font_size=42, weight="BOLD",
+            # --- Arrows from both L1 and L2 → L_total ---
+            arr_l1 = Arrow(
+                start=l1_box.get_right(),
+                end=l_total.get_left() + UP * 0.2 + 0.25 * LEFT,
+                color=C_MATCH,
+                buff=0,
             )
-            l_total.move_to(np.array([3.5, -0.15, 0.0]))
 
-            arr_combine = Arrow(
-                start=np.array([0.8, -0.15, 0.0]),
-                end=np.array([2.3, -0.15, 0.0]),
-                color=C_MATCH, buff=0,
+            arr_l2 = Arrow(
+                start=l2_box.get_right(),
+                end=l_total.get_left() + DOWN * 0.2 + 0.25 * LEFT,
+                color=C_MATCH,
+                buff=0,
             )
 
             # --- Animation sequence ---
@@ -609,8 +727,17 @@ class Scene04LearningObjective(Scene):
                 run_time=TM,
             )
             self.wait(TS)
-            self.play(Create(arr_combine), run_time=TW)
-            self.play(Write(l_total), run_time=TW)
+
+            self.play(
+                Create(arr_l1),
+                Create(arr_l2),
+                run_time=TW
+            )
+            self.play(
+                FadeIn(l_total),
+                Create(l_total_box),
+                run_time=TW
+            )
             self.wait(TM2)
 
             insight = make_insight_box("Multi-task learning: optimize both domains jointly")
@@ -648,7 +775,7 @@ class Scene05HNO3(Scene):
             n_users: int = 5
             left_x: float = -2.8
             right_x: float = 2.8
-            y_positions: List[float] = [1.6, 0.8, 0.0, -0.8, -1.6]
+            y_positions: List[float] = [1.2, 0.4, -0.4, -1.2]
 
             dots_a: List[Dot] = []
             dots_b: List[Dot] = []
@@ -657,9 +784,9 @@ class Scene05HNO3(Scene):
                 dots_b.append(Dot(np.array([right_x, y, 0.0]), radius=0.13, color=C_B))
 
             label_a = Text("Domain A", font_size=20, color=C_A)
-            label_a.move_to(np.array([left_x, 2.3, 0.0]))
+            label_a.move_to(np.array([left_x, 1.9, 0.0]))
             label_b = Text("Domain B", font_size=20, color=C_B)
-            label_b.move_to(np.array([right_x, 2.3, 0.0]))
+            label_b.move_to(np.array([right_x, 1.9, 0.0]))
 
             self.play(
                 LaggedStart(*[GrowFromCenter(d) for d in dots_a + dots_b], lag_ratio=0.1),
@@ -681,15 +808,19 @@ class Scene05HNO3(Scene):
                 self.play(Create(line), run_time=0.25)
             self.wait(TM2)
 
-            algo_label = Text("Hungarian Algorithm: O(n*3)", font_size=18, color=C_ACC)
-            algo_label.move_to(np.array([0.0, -2.5, 0.0]))
+            algo_label = MathTex(
+                r"\text{Time Complexity: } O(n^3)",
+                font_size=32,
+                color=C_ACC
+            )
+            algo_label.move_to(np.array([0.0, -2, 0.0]))
+
             self.play(Write(algo_label), run_time=TW)
             self.wait(TM2)
 
-            label = MathTex(r"\text{Converts no-overlap} \rightarrow \text{overlap via 1-to-1 matching}", font_size=18, color=C_ACC)
-            box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
-            insight = VGroup(box, label)
-            insight.to_edge(DOWN, buff=0.3)
+            label = "Hard matching: Converts no-overlap to overlap via 1-to-1 matching"
+            insight = make_insight_box(label)
+
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene05HNO3.construct: done")
@@ -724,7 +855,7 @@ class Scene06Limitation(Scene):
             n_users: int = 5
             left_x: float = -2.8
             right_x: float = 2.8
-            y_positions: List[float] = [1.6, 0.8, 0.0, -0.8, -1.6]
+            y_positions: List[float] = [1.2, 0.4, -0.4, -1.2, -2]
 
             dots_a: List[Dot] = [
                 Dot(np.array([left_x, y, 0.0]), radius=0.13, color=C_A)
@@ -749,6 +880,12 @@ class Scene06Limitation(Scene):
                 )
                 wrong_lines.append(line)
 
+            graph_group = VGroup(
+                *dots_a,
+                *dots_b,
+                *wrong_lines
+            )
+
             self.play(
                 LaggedStart(*[GrowFromCenter(d) for d in dots_a + dots_b], lag_ratio=0.08),
                 run_time=TM,
@@ -765,23 +902,23 @@ class Scene06Limitation(Scene):
 
             # --- Problem labels ---
             problems: List[Text] = [
-                Text("Highly dependent on initial embedding quality", font_size=16, color=C_FLOW),
-                Text("Cannot be trained end-to-end", font_size=16, color=C_FLOW),
-                Text("Discrete optimization - lacks robustness", font_size=16, color=C_FLOW),
+                Text("Highly dependent on initial embedding quality", font_size=20, color=C_FLOW),
+                Text("Cannot be trained end-to-end", font_size=20, color=C_FLOW),
+                Text("Discrete optimization - lacks robustness", font_size=20, color=C_FLOW),
             ]
-            for i, prob in enumerate(problems):
-                prob.move_to(np.array([0.0, -2.0 - i * 0.45, 0.0]))
-            # Place them below the scene
-            prob_group = VGroup(*problems)
-            prob_group.move_to(np.array([0.0, -2.3, 0.0]))
-            # Stack vertically
+
             for i, p in enumerate(problems):
-                p.move_to(np.array([0.0, -1.9 - i * 0.5, 0.0]))
+                p.move_to(np.array([3.3, 0.2 - i * 0.6, 0.0])) 
 
             self.play(
-                LaggedStart(*[FadeIn(p) for p in problems], lag_ratio=0.4),
-                run_time=TM,
+                graph_group.animate.shift(LEFT * 3.5),
+                run_time=TM
             )
+
+            for p in problems:
+                self.play(FadeIn(p, shift=RIGHT * 0.3), run_time=0.8)
+                self.wait(0.5)
+
             self.wait(TL)
             logger.info("Scene06Limitation.construct: done")
 
@@ -815,7 +952,7 @@ class Scene07SNO3(Scene):
             n_users: int = 5
             left_x: float = -2.8
             right_x: float = 2.8
-            y_positions: List[float] = [1.5, 0.75, 0.0, -0.75, -1.5]
+            y_positions: List[float] = [1.2, 0.4, -0.4, -1.2]
 
             dots_a: List[Dot] = [
                 Dot(np.array([left_x, y, 0.0]), radius=0.13, color=C_A)
@@ -827,9 +964,9 @@ class Scene07SNO3(Scene):
             ]
 
             label_a = Text("Domain A", font_size=20, color=C_A)
-            label_a.move_to(np.array([left_x, 2.3, 0.0]))
+            label_a.move_to(np.array([left_x, 1.9, 0.0]))
             label_b = Text("Domain B", font_size=20, color=C_B)
-            label_b.move_to(np.array([right_x, 2.3, 0.0]))
+            label_b.move_to(np.array([right_x, 1.9, 0.0]))
 
             self.play(
                 LaggedStart(*[GrowFromCenter(d) for d in dots_a + dots_b], lag_ratio=0.08),
@@ -846,7 +983,7 @@ class Scene07SNO3(Scene):
                     opacity: float = float(
                         np.random.default_rng(
                             abs(int(da.get_y() * 100)) + abs(int(db.get_y() * 100))
-                        ).uniform(0.08, 0.35)
+                        ).uniform(0.5, 1)
                     )
                     line = Line(
                         da.get_center(),
@@ -864,15 +1001,13 @@ class Scene07SNO3(Scene):
             self.wait(TM2)
 
             # --- Caption explaining opacity = probability ---
-            opacity_note = Text("Opacity = connection probability", font_size=18, color=C_SOFT)
-            opacity_note.move_to(np.array([0.0, -2.5, 0.0]))
+            opacity_note = Text("Opacity = connection probability", font_size=20, color=C_SOFT)
+            opacity_note.move_to(np.array([0.0, -2, 0.0]))
             self.play(Write(opacity_note), run_time=TW)
             self.wait(TM2)
 
-            label = MathTex(r"\text{Soft matching: from 1-to-1 mapping } \rightarrow \text{ distribution alignment}", font_size=18, color=C_ACC)
-            box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
-            insight = VGroup(box, label)
-            insight.to_edge(DOWN, buff=0.3)
+            label = "Soft matching: Convert no-overlap to overlap via distribution alignment"
+            insight = make_insight_box(label)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene07SNO3.construct: done")
@@ -905,14 +1040,14 @@ class Scene08SinkhornIntuition(Scene):
 
             # --- Source distribution (left) - varying dot sizes = mass ---
             source_pos: List[Tuple[float, float, float]] = [
-                (-4.0, 1.2, 0.0), (-4.0, 0.0, 0.0), (-4.0, -1.2, 0.0),
+                (-4.0, 1.4, 0.0), (-4.0, 0.25, 0.0), (-4.0, -0.85, 0.0),
             ]
             source_radii: List[float] = [0.25, 0.40, 0.18]  # mass = size
 
             # --- Target distribution (right) ---
             target_pos: List[Tuple[float, float, float]] = [
-                (4.0, 1.5, 0.0), (4.0, 0.3, 0.0),
-                (4.0, -0.7, 0.0), (4.0, -1.8, 0.0),
+                (4.0, 1.95, 0.0), (4.0, 0.8, 0.0),
+                (4.0, -0.25, 0.0), (4.0, -1.2, 0.0),
             ]
             target_radii: List[float] = [0.20, 0.32, 0.15, 0.28]
 
@@ -925,13 +1060,13 @@ class Scene08SinkhornIntuition(Scene):
                 for p, r in zip(target_pos, target_radii)
             ]
 
-            src_label = Text("Source Distribution", font_size=18, color=C_A)
-            src_label.move_to(np.array([-4.0, -2.5, 0.0]))
-            tgt_label = Text("Target Distribution", font_size=18, color=C_B)
-            tgt_label.move_to(np.array([4.0, -2.5, 0.0]))
+            src_label = Text("Source Distribution", font_size=20, color=C_A)
+            src_label.move_to(np.array([-4.0, -2.08, 0.0]))
+            tgt_label = Text("Target Distribution", font_size=20, color=C_B)
+            tgt_label.move_to(np.array([4.0, -2.1, 0.0]))
 
-            size_note = Text("Size = probability mass", font_size=16, color=C_ACC)
-            size_note.move_to(np.array([0.0, -2.5, 0.0]))
+            size_note = Text("Size = Mass Probability", font_size=20, color=C_ACC)
+            size_note.move_to(np.array([0.0, -2.1, 0.0]))
 
             self.play(
                 LaggedStart(*[GrowFromCenter(d) for d in source_dots], lag_ratio=0.2),
@@ -948,18 +1083,18 @@ class Scene08SinkhornIntuition(Scene):
 
             # --- Phase 2: Draw transport flow arrows ---
             flow_arrows: List[Arrow] = [
-                Arrow(np.array(source_pos[0]), np.array(target_pos[0]),
-                      color=C_FLOW, stroke_width=3, buff=0.3),
-                Arrow(np.array(source_pos[0]), np.array(target_pos[1]),
-                      color=C_FLOW, stroke_width=1.5, buff=0.3, stroke_opacity=0.5),
-                Arrow(np.array(source_pos[1]), np.array(target_pos[2]),
-                      color=C_FLOW, stroke_width=3, buff=0.3),
-                Arrow(np.array(source_pos[2]), np.array(target_pos[3]),
-                      color=C_FLOW, stroke_width=2, buff=0.3),
+                Arrow(np.array(source_pos[0] + + RIGHT * 0.01), np.array(target_pos[0]),
+                      color=C_FLOW, stroke_width=3, buff=0.21),
+                Arrow(np.array(source_pos[0]), np.array(target_pos[1] + LEFT * 0.1),
+                      color=C_FLOW, stroke_width=1.5, buff=0.2, stroke_opacity=0.5),
+                Arrow(np.array(source_pos[1] + RIGHT * 0.2), np.array(target_pos[2]) + RIGHT * 0.05,
+                      color=C_FLOW, stroke_width=3, buff=0.2),
+                Arrow(np.array(source_pos[2] + LEFT * 0.05), np.array(target_pos[3]),
+                      color=C_FLOW, stroke_width=2, buff=0.25),
             ]
 
-            flow_label = Text("Transport plan (arrows = flow)", font_size=16, color=C_FLOW)
-            flow_label.move_to(np.array([0.0, 2.5, 0.0]))
+            flow_label = Text("Transport plan (Opacity = contribution)", font_size=20, color=C_FLOW)
+            flow_label.move_to(np.array([0.0, 2.65, 0.0]))
 
             self.play(Write(flow_label), run_time=TW)
             self.play(
@@ -968,10 +1103,8 @@ class Scene08SinkhornIntuition(Scene):
             )
             self.wait(TM2)
 
-            label = MathTex(r"\text{Sinkhorn: differentiable OT } \rightarrow \text{ trains end-to-end in deep learning}", font_size=18, color=C_ACC)
-            box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
-            insight = VGroup(box, label)
-            insight.to_edge(DOWN, buff=0.3)
+            label = "Sinkhorn: Differentiable OT for end-to-end training in deep learning"
+            insight = make_insight_box(label)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene08SinkhornIntuition.construct: done")
@@ -1003,15 +1136,17 @@ class Scene09FinalObjective(Scene):
             self.play(FadeIn(title), run_time=TF)
 
             # --- Component 1: Recommendation loss ---
-            rec_loss = Text("L rec", font_size=48, color=C_A, weight="BOLD")
-            rec_loss.move_to(np.array([-3.0, 0.5, 0.0]))
-            rec_desc = Text("Recommendation accuracy", font_size=18, color=C_A)
+            rec_loss = MathTex(r"\mathcal{L}_{\text{rec}}", color=C_A, font_size=36).scale(1.5)
+            rec_loss.move_to(np.array([-3.4, 1.5, 0.0]))
+
+            rec_desc = MathTex(r"\text{Recommendation accuracy}", font_size=36, color=C_A)
             rec_desc.next_to(rec_loss, DOWN, buff=0.3)
 
             # --- Component 2: Sinkhorn loss ---
-            sink_loss = Text("lambda * L sink", font_size=48, color=C_B, weight="BOLD")
-            sink_loss.move_to(np.array([3.0, 0.5, 0.0]))
-            sink_desc = Text("Distribution alignment (Sinkhorn)", font_size=18, color=C_B)
+            sink_loss = MathTex(r"\lambda \times \mathcal{L}_{\text{sink}}", color=C_B, font_size=36).scale(1.5)
+            sink_loss.move_to(np.array([3.4, 1.5, 0.0]))
+
+            sink_desc = MathTex(r"\text{Distribution alignment (Sinkhorn)}", font_size=36, color=C_B)
             sink_desc.next_to(sink_loss, DOWN, buff=0.3)
 
             self.play(
@@ -1025,21 +1160,26 @@ class Scene09FinalObjective(Scene):
             )
             self.wait(TS)
 
-            # --- Merged final equation ---
-            final_eq = Text(
-                "L = L rec + lambda * L sink",
-                font_size=44,
-                color=C_TEXT,
-                weight="BOLD",
-            )
-            final_eq.move_to(np.array([0.0, -1.2, 0.0]))
+            # --- Final equation ---
+            final_eq = MathTex(
+                r"\mathcal{L} = \mathcal{L}_{\text{rec}} + \lambda \times \mathcal{L}_{\text{sink}}",
+                color=C_MATCH,
+                font_size=36
+            ).scale(1.5)
+            final_eq.move_to(np.array([0.0, -0.8, 0.0]))
 
-            plus_sign = Text("+", font_size=52, color=C_MATCH, weight="BOLD")
-            plus_sign.move_to(np.array([0.0, 0.5, 0.0]))
+            final_desc = MathTex(r"\text{Combined loss function}", font_size=36, color=C_MATCH)
+            final_desc.next_to(final_eq, DOWN, buff=0.3)
+
+            plus_sign = MathTex("+", color=C_MATCH).scale(1.5)
+            plus_sign.move_to(np.array([0.0, 1.5, 0.0]))
 
             self.play(Write(plus_sign), run_time=TW)
             self.wait(TS)
-            self.play(Write(final_eq), run_time=TW)
+            self.play(
+                FadeIn(final_eq), FadeIn(final_desc),
+                run_time=TM,
+            )
             self.wait(TM2)
 
             insight = make_insight_box("Representation learning + distribution alignment")
@@ -1073,20 +1213,41 @@ class Scene10KeyInsight(Scene):
             self.play(FadeIn(title), run_time=TF)
 
             # --- Three insight cards ---
-            insights: List[Tuple[str, str]] = [
-                ("No identity needed", C_A),
-                ("Preference is enough", C_B),
-                ("Soft matching wins", C_MATCH),
+            insights: List[Tuple[str, str, str]] = [
+                ("No identity needed", C_A, "assets/target.png" ),
+                ("Preference is enough", C_MATCH, "assets/target.png" ),
+                ("Soft matching wins", C_B, "assets/accept.png" ),
             ]
-            cards: List[VGroup] = []
-            for i, (text, color) in enumerate(insights):
-                t = Text(text, font_size=30, color=color, weight="BOLD")
-                t.move_to(np.array([0.0, 1.0 - i * 1.3, 0.0]))
-                box = SurroundingRectangle(t, color=color, buff=0.2, corner_radius=0.1)
-                cards.append(VGroup(box, t))
+
+            cards: List[Group] = []
+
+            for (text, color, icon_path) in insights:
+                t = Text(text, font_size=32, color=color)
+
+                icon = ImageMobject(icon_path).scale(0.15)
+
+                # Group icon and text, arrange horizontally
+                row = Group(icon, t).arrange(RIGHT, buff=0.3)
+
+                # Create a colored box behind the row
+                box = Rectangle(
+                    width=6.5,
+                    height=1.2,
+                    color=color,
+                ).set_fill(opacity=0.15)
+
+                row.align_to(box, LEFT)
+                row.shift(RIGHT * 0.4)  # Left padding 
+
+                group = Group(box, row)
+                cards.append(group)
+
+            # Arrange cards
+            cards = Group(*cards).arrange(DOWN, aligned_edge=LEFT, buff=0.5)
+            cards.to_edge(LEFT, buff=3.8)
 
             for card in cards:
-                self.play(FadeIn(card), run_time=TW)
+                self.play(FadeIn(card, shift=RIGHT * 0.3), run_time=TW)
                 self.wait(TS)
 
             self.wait(TL)
@@ -1120,19 +1281,23 @@ class Scene11GradientDescent(Scene):
 
             # --- Axes ---
             axes = Axes(
-                x_range=[-3.0, 3.0, 1.0],
-                y_range=[0.0, 9.0, 2.0],
+                x_range=[-3.0, 2.9, 1.0],
+                y_range=[0.0, 8.9, 1.8],
                 x_length=7,
-                y_length=4,
+                y_length=5,
                 axis_config={"color": C_TEXT, "stroke_width": 1.5},
                 tips=False,
             )
+            
+            axes.x_axis.add_tip(tip_length=0.15)
+            axes.y_axis.add_tip(tip_length=0.15)
+
             axes.shift(DOWN * 0.5)
 
-            x_label = Text("Parameter", font_size=18, color=C_TEXT)
-            x_label.next_to(axes.x_axis, DOWN, buff=0.2)
-            y_label = Text("Loss", font_size=18, color=C_TEXT)
-            y_label.next_to(axes.y_axis, LEFT, buff=0.2)
+            x_label = Text("Parameter", font_size=20, color=C_TEXT)
+            x_label.next_to(axes.x_axis, RIGHT, buff=0.2)
+            y_label = Text("Loss", font_size=20, color=C_TEXT)
+            y_label.next_to(axes.y_axis, UP, buff=0.2)
 
             # --- Loss curve: simple parabola ---
             curve = axes.plot(
@@ -1141,7 +1306,7 @@ class Scene11GradientDescent(Scene):
                 color=C_A,
                 stroke_width=3,
             )
-            curve_label = Text("L(theta) = theta^2", font_size=24, color=C_A, weight="BOLD")
+            curve_label = MathTex("L(\\theta) = \\theta^2", font_size=36, color=C_A)
             curve_label.next_to(curve, UP + RIGHT, buff=0.2)
 
             self.play(Create(axes), FadeIn(x_label), FadeIn(y_label), run_time=TM)
@@ -1176,14 +1341,11 @@ class Scene11GradientDescent(Scene):
             self.wait(TS)
 
             # --- Convergence indicator ---
-            conv_label = Text("Converged at minimum", font_size=18, color=C_MATCH)
-            conv_label.next_to(point, RIGHT, buff=0.3)
+            conv_label = Text("Converged at minimum", font_size=20, color=C_MATCH)
+            conv_label.next_to(point, DOWN, buff=0.3)
             self.play(Write(conv_label), run_time=TW)
             self.wait(TM2)
 
-            insight = make_insight_box("HNO3 vs SNO3 differ primarily in their loss surface geometry")
-            self.play(FadeIn(insight), run_time=TF)
-            self.wait(TL)
             logger.info("Scene11GradientDescent.construct: done")
 
         except Exception as exc:
@@ -1213,35 +1375,42 @@ class Scene12LossLandscape(Scene):
 
             # --- Left axes: HNO3 rough landscape ---
             axes_l = Axes(
-                x_range=[-3.0, 3.0, 1.0],
-                y_range=[0.0, 10.0, 2.0],
+                x_range=[-3.0, 2.9, 1.0],
+                y_range=[0.0, 9.9, 2.0],
                 x_length=5.0,
                 y_length=3.5,
                 axis_config={"color": C_TEXT, "stroke_width": 1},
                 tips=False,
             )
-            axes_l.shift(LEFT * 3.2 + DOWN * 0.3)
+
+            axes_l.x_axis.add_tip(tip_length=0.15)
+            axes_l.y_axis.add_tip(tip_length=0.15)
+
+            axes_l.shift(LEFT * 3.2 + UP * 0.2)
 
             # HNO3: rough, non-convex with local minima
             rough_curve = axes_l.plot(
-                lambda x: (x ** 2) + 2.0 * np.sin(4.0 * x) + 0.8 * np.cos(7.0 * x) + 2.0,
+                lambda x: (x ** 2) + 1.5 * np.sin(4.0 * x) + 0.6 * np.cos(7.0 * x) + 3.0,
                 x_range=[-3.0, 3.0],
                 color=C_FLOW,
                 stroke_width=2.5,
             )
-            hno3_label = Text("HNO3 - Hard Matching", font_size=18, color=C_FLOW)
+            hno3_label = Text("HNO3 - Hard Matching", font_size=20, color=C_FLOW)
             hno3_label.next_to(axes_l, DOWN, buff=0.2)
 
             # --- Right axes: SNO3 smooth landscape ---
             axes_r = Axes(
-                x_range=[-3.0, 3.0, 1.0],
-                y_range=[0.0, 10.0, 2.0],
+                x_range=[-3.0, 2.9, 1.0],
+                y_range=[0.0, 9.9, 2.0],
                 x_length=5.0,
                 y_length=3.5,
                 axis_config={"color": C_TEXT, "stroke_width": 1},
                 tips=False,
             )
-            axes_r.shift(RIGHT * 3.2 + DOWN * 0.3)
+            axes_r.x_axis.add_tip(tip_length=0.15)
+            axes_r.y_axis.add_tip(tip_length=0.15)
+
+            axes_r.shift(RIGHT * 3.2 + UP * 0.2)
 
             # SNO3: smooth, convex - easy to optimize
             smooth_curve = axes_r.plot(
@@ -1250,7 +1419,7 @@ class Scene12LossLandscape(Scene):
                 color=C_B,
                 stroke_width=2.5,
             )
-            sno3_label = Text("SNO3 - Soft Matching", font_size=18, color=C_B)
+            sno3_label = Text("SNO3 - Soft Matching", font_size=20, color=C_B)
             sno3_label.next_to(axes_r, DOWN, buff=0.2)
 
             # --- Divider ---
@@ -1277,7 +1446,7 @@ class Scene12LossLandscape(Scene):
             self.wait(TS)
 
             # --- Drop a point on each landscape and show path ---
-            point_l = Dot(axes_l.c2p(-2.5, (-2.5) ** 2 + 2.0 * np.sin(-10.0) + 0.8 * np.cos(-17.5) + 2.0),
+            point_l = Dot(axes_l.c2p(-2.5, (-2.5) ** 2 + 1.5 * np.sin(-10.0) + 0.6 * np.cos(-17.5) + 3.0),
                           radius=0.13, color=C_LOSS)
             point_r = Dot(axes_r.c2p(-2.5, (-2.5) ** 2 + 0.5),
                           radius=0.13, color=C_MATCH)
@@ -1286,19 +1455,31 @@ class Scene12LossLandscape(Scene):
 
             # Rough path: zigzag descent
             rough_x_steps: List[float] = [-2.5, -1.8, -2.1, -1.3, -1.6, -0.8, -0.4, 0.0]
-            for x_val in rough_x_steps[1:]:
-                y_val = x_val ** 2 + 2.0 * np.sin(4.0 * x_val) + 0.8 * np.cos(7.0 * x_val) + 2.0
-                self.play(point_l.animate.move_to(axes_l.c2p(x_val, y_val)), run_time=0.25)
 
             # Smooth path: direct descent
             smooth_x_steps: List[float] = [-2.5, -1.8, -1.2, -0.6, -0.2, 0.0]
-            for x_val in smooth_x_steps[1:]:
-                y_val = x_val ** 2 + 0.5
-                self.play(point_r.animate.move_to(axes_r.c2p(x_val, y_val)), run_time=0.25)
+            
+            max_len = max(len(rough_x_steps), len(smooth_x_steps))
+
+            # Animate simultaneously
+            for i in range(max_len):
+                anims = []
+
+                if i < len(rough_x_steps):
+                    x_l = rough_x_steps[i]
+                    y_l = x_l ** 2 + 1.5 * np.sin(4.0 * x_l) + 0.6 * np.cos(7.0 * x_l) + 3.0
+                    anims.append(point_l.animate.move_to(axes_l.c2p(x_l, y_l)))
+
+                if i < len(smooth_x_steps):
+                    x_r = smooth_x_steps[i]
+                    y_r = x_r ** 2 + 0.5
+                    anims.append(point_r.animate.move_to(axes_r.c2p(x_r, y_r)))
+
+                self.play(*anims, run_time=0.25)
 
             self.wait(TM2)
 
-            insight = make_insight_box("Core reason SNO3 outperforms HNO3: smoother optimization landscape")
+            insight = make_insight_box("SNO3 outperforms HNO3: Smoother optimization landscape")
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene12LossLandscape.construct: done")
@@ -1326,21 +1507,33 @@ class Scene13EmbeddingSpace3D(ThreeDScene):
             logger.info("Scene13EmbeddingSpace3D.construct: start")
             self.camera.background_color = BG
 
+            title = make_title("3D Embedding Space Visualization")
+
             # --- Camera orientation ---
             self.set_camera_orientation(phi=70 * DEGREES, theta=-45 * DEGREES)
             self.begin_ambient_camera_rotation(rate=0.08)
 
+            # Title
+            self.add_fixed_in_frame_mobjects(title)
+            self.add(title)
+
+            self.play(FadeIn(title), run_time=TF)
+
             # --- 3D Axes ---
             axes = ThreeDAxes(
-                x_range=[-4.0, 4.0, 1.0],
-                y_range=[-4.0, 4.0, 1.0],
-                z_range=[-3.0, 3.0, 1.0],
+                x_range=[-4.0, 3.9, 1.0],
+                y_range=[-4.0, 3.9, 1.0],
+                z_range=[-3.0, 2.9, 1.0],
                 x_length=6,
                 y_length=6,
                 z_length=4,
                 axis_config={"color": C_TEXT, "stroke_width": 1},
                 tips=False,
             )
+            axes.x_axis.add_tip(tip_length=0.15)
+            axes.y_axis.add_tip(tip_length=0.15)
+            axes.z_axis.add_tip(tip_length=0.15)
+
             self.play(Create(axes), run_time=TM)
             self.wait(TS)
 
@@ -1380,25 +1573,93 @@ class Scene13EmbeddingSpace3D(ThreeDScene):
             )
             self.wait(TM2)
 
+            # --- Phase 1: Hard alignment (forced collapse) ---
+            hard_a_positions: List[np.ndarray] = [
+                np.array([
+                    float(rng_a.uniform(-1, 1)),
+                    float(rng_a.uniform(-1, 1)),
+                    float(rng_a.uniform(-1, 1)),
+                ])
+                for _ in range(8)
+            ]
+
+            hard_b_positions: List[np.ndarray] = [
+                np.array([
+                    float(rng_a.uniform(-1, 1)),
+                    float(rng_a.uniform(-1, 1)),
+                    float(rng_a.uniform(-1, 1)),
+                ])
+                for _ in range(8)
+            ]
+
+            hard_text = Text("HNO3: Forced alignment", font_size=20, color=C_FLOW)
+
+            box = SurroundingRectangle(
+                hard_text,
+                color=C_FLOW,
+                buff=0.2,
+                corner_radius=0.1,
+                fill_opacity=0.15
+            )
+
+            hard_label = VGroup(box, hard_text)
+            hard_label.next_to(ORIGIN, DOWN).to_edge(DOWN, buff=0.8)
+
+            self.add_fixed_in_frame_mobjects(hard_label)
+
+            self.play(
+                FadeIn(hard_label, run_time=TF),
+                *[
+                    da.animate.move_to(hard_a)
+                    for da, hard_a in zip(dots_a, hard_a_positions)
+                ],
+                *[
+                    db.animate.move_to(hard_b)
+                    for db, hard_b in zip(dots_b, hard_b_positions)
+                ],
+                run_time=TM,
+            )
+
+            self.wait(TL)
+            self.play(FadeOut(hard_label))
+            self.wait(TS)
+
             # --- Phase 2: Soft alignment - move clusters closer together ---
             aligned_a_positions: List[np.ndarray] = [
                 np.array([
-                    pos[0] * 0.4,
-                    pos[1] * 0.4,
-                    pos[2] * 0.7,
+                    float(rng_a.uniform(-0.5, 0)),
+                    float(rng_a.uniform(0.5, 1)),
+                    float(rng_a.uniform(-0.5, 0.5)),
                 ])
-                for pos in cluster_a_positions
-            ]
-            aligned_b_positions: List[np.ndarray] = [
-                np.array([
-                    pos[0] * 0.4,
-                    pos[1] * 0.4,
-                    pos[2] * 0.7,
-                ])
-                for pos in cluster_b_positions
+                for _ in range(8)
             ]
 
+            aligned_b_positions: List[np.ndarray] = [
+                np.array([
+                    float(rng_b.uniform(0.5, 1)),
+                    float(rng_b.uniform(-1, -0.5)),
+                    float(rng_b.uniform(-0.5, 0.5)),
+                ])
+                for _ in range(8)
+            ]
+
+            soft_text = Text("SNO3: Smooth alignment", font_size=20, color=C_MATCH)
+
+            box = SurroundingRectangle(
+                soft_text,
+                color=C_MATCH,
+                buff=0.2,
+                corner_radius=0.1,
+                fill_opacity=0.15
+            )
+
+            soft_label = VGroup(box, soft_text)
+            soft_label.next_to(ORIGIN, DOWN).to_edge(DOWN, buff=0.8)
+
+            self.add_fixed_in_frame_mobjects(soft_label)
+
             self.play(
+                FadeIn(soft_label, run_time=TF),
                 *[
                     da.animate.move_to(aligned_a)
                     for da, aligned_a in zip(dots_a, aligned_a_positions)
@@ -1407,7 +1668,7 @@ class Scene13EmbeddingSpace3D(ThreeDScene):
                     db.animate.move_to(aligned_b)
                     for db, aligned_b in zip(dots_b, aligned_b_positions)
                 ],
-                run_time=TM * 1.5,
+                run_time=TM,
             )
             self.wait(TM2)
             self.stop_ambient_camera_rotation()
@@ -1446,41 +1707,44 @@ class Scene14SinkhornConvergence(Scene):
             # --- Phase 1: Random initial matrix ---
             rng = np.random.default_rng(99)
             initial_matrix: np.ndarray = rng.uniform(0.1, 1.0, (self.N_USERS, self.N_USERS))
-            grid_initial = self._build_heatmap(initial_matrix, np.array([-3.0, 0.0, 0.0]))
+            grid_initial = self._build_heatmap(initial_matrix, np.array([0.0, 0.0, 0.0]))
 
-            iter_label = Text("Iteration 0: Random initialization", font_size=18, color=C_TEXT)
-            iter_label.move_to(np.array([-3.0, -2.0, 0.0]))
+            iter_label = Text("Random initialization", font_size=22, color=C_MATCH)
+            iter_label.move_to(np.array([0.0, -2.0, 0.0]))
 
-            self.play(FadeIn(grid_initial), Write(iter_label), run_time=TM)
+            legend = MathTex(r"arr[i, j] = \text{transport weight from user } i \text{ to user } j", font_size=36, color=C_LOSS)
+            legend.next_to(grid_initial, UP, buff=0.3)
+
+            self.play(FadeIn(grid_initial), Write(iter_label), FadeIn(legend), run_time=TM)
             self.wait(TM2)
 
             # --- Phase 2: After row normalization ---
             row_norm: np.ndarray = initial_matrix / initial_matrix.sum(axis=1, keepdims=True)
-            grid_row = self._build_heatmap(row_norm, np.array([-3.0, 0.0, 0.0]))
+            grid_row = self._build_heatmap(row_norm, np.array([0.0, 0.0, 0.0]))
 
-            new_label = Text("After row normalization", font_size=18, color=C_A)
-            new_label.move_to(np.array([-3.0, -2.0, 0.0]))
+            new_label = Text("After row normalization", font_size=22, color=C_MATCH)
+            new_label.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
                 ReplacementTransform(grid_initial, grid_row),
                 ReplacementTransform(iter_label, new_label),
                 run_time=TM,
             )
-            self.wait(TS)
+            self.wait(TM2)
 
             # --- Phase 3: After column normalization ---
             col_norm: np.ndarray = row_norm / row_norm.sum(axis=0, keepdims=True)
-            grid_col = self._build_heatmap(col_norm, np.array([-3.0, 0.0, 0.0]))
+            grid_col = self._build_heatmap(col_norm, np.array([0.0, 0.0, 0.0]))
 
-            col_label = Text("After column normalization", font_size=18, color=C_B)
-            col_label.move_to(np.array([-3.0, -2.0, 0.0]))
+            col_label = Text("After column normalization", font_size=22, color=C_MATCH)
+            col_label.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
                 ReplacementTransform(grid_row, grid_col),
                 ReplacementTransform(new_label, col_label),
                 run_time=TM,
             )
-            self.wait(TS)
+            self.wait(TM2)
 
             # --- Phase 4: Converged (simulate several more iterations) ---
             converged: np.ndarray = col_norm.copy()
@@ -1488,9 +1752,10 @@ class Scene14SinkhornConvergence(Scene):
                 converged = converged / converged.sum(axis=1, keepdims=True)
                 converged = converged / converged.sum(axis=0, keepdims=True)
 
-            grid_conv = self._build_heatmap(converged, np.array([-3.0, 0.0, 0.0]))
-            conv_label = Text("Converged: stable transport plan", font_size=18, color=C_MATCH)
-            conv_label.move_to(np.array([-3.0, -2.0, 0.0]))
+            grid_conv = self._build_heatmap(converged, np.array([0.0, 0.0, 0.0]))
+
+            conv_label = Text("Converged: Stable transport plan", font_size=22, color=C_MATCH)
+            conv_label.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
                 ReplacementTransform(grid_col, grid_conv),
@@ -1499,14 +1764,9 @@ class Scene14SinkhornConvergence(Scene):
             )
             self.wait(TM2)
 
-            # --- Sidebar: matching arrows proportional to transport plan ---
-            self._show_transport_arrows(converged)
-            self.wait(TM2)
+            label = "Sinkhorn: Iterative Optimal Transport"
+            insight = make_insight_box(label)
 
-            label = MathTex(r"\text{Sinkhorn = differentiable OT } \rightarrow \text{ enables end-to-end gradient flow}", font_size=18, color=C_ACC)
-            box = SurroundingRectangle(label, color=C_ACC, buff=0.2, corner_radius=0.1)
-            insight = VGroup(box, label)
-            insight.to_edge(DOWN, buff=0.3)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
             logger.info("Scene14SinkhornConvergence.construct: done")
@@ -1532,7 +1792,7 @@ class Scene14SinkhornConvergence(Scene):
         """
         logger.debug(f"_build_heatmap: matrix shape={matrix.shape}")
         n: int = matrix.shape[0]
-        cell_size: float = 0.55
+        cell_size: float = 0.6
         cells: List[Rectangle] = []
         m_max: float = float(matrix.max())
         for row in range(n):
@@ -1553,46 +1813,7 @@ class Scene14SinkhornConvergence(Scene):
                 cell.move_to(np.array([x_pos, y_pos, 0.0]))
                 cells.append(cell)
         return VGroup(*cells)
-
-    def _show_transport_arrows(self, transport_plan: np.ndarray) -> None:
-        """
-        Show arrows on the right side of screen proportional to transport plan values.
-
-        Args:
-            transport_plan: Converged doubly-stochastic transport matrix.
-
-        Returns:
-            None
-        """
-        logger.debug("_show_transport_arrows: drawing arrows")
-        n: int = transport_plan.shape[0]
-        left_x: float = 1.8
-        right_x: float = 4.5
-        y_positions: List[float] = [1.5 - i * 0.7 for i in range(n)]
-
-        arrows: List[Arrow] = []
-        threshold: float = 0.15  # Only draw arrows above this weight
-        for i in range(n):
-            for j in range(n):
-                weight: float = float(transport_plan[i, j])
-                if weight > threshold:
-                    arr = Arrow(
-                        start=np.array([left_x, y_positions[i], 0.0]),
-                        end=np.array([right_x, y_positions[j], 0.0]),
-                        color=C_FLOW,
-                        stroke_width=1.0 + 3.0 * weight,
-                        stroke_opacity=0.4 + 0.6 * weight,
-                        buff=0.1,
-                        max_tip_length_to_length_ratio=0.2,
-                    )
-                    arrows.append(arr)
-
-        if arrows:
-            self.play(
-                LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.05),
-                run_time=TM,
-            )
-
+    
 
 # ============================================================
 # SCENE 15 - GRADIENT VECTOR FIELD IN EMBEDDING SPACE
@@ -1621,7 +1842,7 @@ class Scene15GradientVectorField(Scene):
 
             pos_a: List[np.ndarray] = [
                 np.array([float(rng_a.uniform(-4.0, -2.0)),
-                          float(rng_a.uniform(-0.5, 1.5)), 0.0])
+                          float(rng_a.uniform(0, 2)), 0.0])
                 for _ in range(7)
             ]
             pos_b: List[np.ndarray] = [
@@ -1645,8 +1866,8 @@ class Scene15GradientVectorField(Scene):
 
             # --- Phase 2: Gradient field arrows (grid of small arrows) ---
             field_arrows: List[Arrow] = self._build_gradient_field()
-            field_label = Text("Gradient field pushes embeddings toward alignment", font_size=16, color=C_FLOW)
-            field_label.move_to(np.array([0.0, -2.5, 0.0]))
+            field_label = Text("Gradient field pushes embeddings toward alignment", font_size=20, color=C_FLOW)
+            field_label.move_to(np.array([0.0, -1.8, 0.0]))
 
             self.play(
                 LaggedStart(*[Create(a) for a in field_arrows], lag_ratio=0.02),
@@ -1657,11 +1878,11 @@ class Scene15GradientVectorField(Scene):
 
             # --- Phase 3: Embeddings move along the gradient field ---
             target_a: List[np.ndarray] = [
-                np.array([p[0] * 0.35 - 0.5, p[1] * 0.35, 0.0])
+                np.array([p[0] * 0.35 - 0.5, p[1] * 0.35 + 0.8, 0.0])
                 for p in pos_a
             ]
             target_b: List[np.ndarray] = [
-                np.array([p[0] * 0.35 + 0.5, p[1] * 0.35, 0.0])
+                np.array([p[0] * 0.35, p[1] * 0.35, 0.0])
                 for p in pos_b
             ]
 
@@ -1673,7 +1894,7 @@ class Scene15GradientVectorField(Scene):
             self.wait(TM2)
 
             insight = make_insight_box(
-                "Gradient field does not just update parameters - it reshapes embedding geometry"
+                "Gradients sculpt the geometry, not just the weights"
             )
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
@@ -1694,8 +1915,8 @@ class Scene15GradientVectorField(Scene):
         logger.debug("_build_gradient_field: building grid")
         arrows: List[Arrow] = []
         # Grid from x=-4 to 4, y=-2 to 2, step=1.5
-        for gx in np.arange(-3.5, 4.0, 1.5):
-            for gy in np.arange(-1.5, 2.0, 1.0):
+        for gx in np.arange(-3, 4.5, 1.5):
+            for gy in np.arange(-0.8, 3.0, 1.0):
                 # Direction: arrows point right (toward alignment)
                 dx: float = 0.35 if gx < 0 else -0.35
                 dy: float = -gy * 0.1  # slight vertical pull toward center
@@ -1703,8 +1924,8 @@ class Scene15GradientVectorField(Scene):
                     start=np.array([gx, gy, 0.0]),
                     end=np.array([gx + dx, gy + dy, 0.0]),
                     color=C_FLOW,
-                    stroke_width=1.2,
-                    stroke_opacity=0.35,
+                    stroke_width=3,
+                    stroke_opacity=0.6,
                     buff=0.0,
                     max_tip_length_to_length_ratio=0.3,
                 )
@@ -1736,16 +1957,19 @@ class Scene16KLvsSinkhorn(Scene):
             # --- Left panel: KL divergence ---
             axes_l = Axes(
                 x_range=[-6.0, 6.0, 2.0],
-                y_range=[0.0, 0.55, 0.1],
+                y_range=[0.0, 0.59, 0.1],
                 x_length=5.5,
                 y_length=3.5,
                 axis_config={"color": C_TEXT, "stroke_width": 1},
                 tips=False,
             )
-            axes_l.shift(LEFT * 3.3 + DOWN * 0.3)
+            axes_l.x_axis.add_tip(tip_length=0.15)
+            axes_l.y_axis.add_tip(tip_length=0.15)
 
-            kl_header = Text("KL Divergence (Failed)", font_size=20, color=C_FLOW, weight="BOLD")
-            kl_header.next_to(axes_l, UP, buff=0.2)
+            axes_l.shift(LEFT * 3.3 + DOWN * 0.5)
+
+            kl_header = Text("KL Divergence (Failed)", font_size=22, color=C_FLOW, weight="BOLD")
+            kl_header.next_to(axes_l, UP, buff=0.5)
 
             # Two Gaussians with NO overlap
             source_kl = axes_l.plot(
@@ -1758,22 +1982,25 @@ class Scene16KLvsSinkhorn(Scene):
                 x_range=[0.0, 6.0],
                 color=C_B, stroke_width=2.5,
             )
-            kl_infinity = Text("KL = infinity", font_size=30, color=C_FLOW, weight="BOLD")
+            kl_infinity = MathTex(r"KL(P\|Q) = \infty", font_size=36, color=C_FLOW)
             kl_infinity.next_to(axes_l, DOWN, buff=0.2)
 
             # --- Right panel: Sinkhorn distance ---
             axes_r = Axes(
                 x_range=[-6.0, 6.0, 2.0],
-                y_range=[0.0, 0.55, 0.1],
+                y_range=[0.0, 0.59, 0.1],
                 x_length=5.5,
                 y_length=3.5,
                 axis_config={"color": C_TEXT, "stroke_width": 1},
                 tips=False,
             )
-            axes_r.shift(RIGHT * 3.3 + DOWN * 0.3)
+            axes_r.x_axis.add_tip(tip_length=0.15)
+            axes_r.y_axis.add_tip(tip_length=0.15)
 
-            sink_header = Text("Sinkhorn Distance (Works)", font_size=20, color=C_B, weight="BOLD")
-            sink_header.next_to(axes_r, UP, buff=0.2)
+            axes_r.shift(RIGHT * 3.3 + DOWN * 0.5)
+
+            sink_header = Text("Sinkhorn Distance (Works)", font_size=22, color=C_B, weight="BOLD")
+            sink_header.next_to(axes_r, UP, buff=0.55)
 
             source_sink = axes_r.plot(
                 lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x + 3.5) / 0.8) ** 2),
@@ -1791,12 +2018,13 @@ class Scene16KLvsSinkhorn(Scene):
                 Arrow(
                     start=axes_r.c2p(-3.5, 0.0),
                     end=axes_r.c2p(3.5, 0.0),
-                    color=C_FLOW,
+                    color=C_LOSS,
                     stroke_width=2.5,
                     buff=0,
+                    tip_length=0.25
                 )
             ]
-            sink_value = Text("W = finite (Sinkhorn stable)", font_size=26, color=C_B, weight="BOLD")
+            sink_value = MathTex(r"W(P, Q) \neq \infty", font_size=36, color=C_B)
             sink_value.next_to(axes_r, DOWN, buff=0.2)
 
             divider = DashedLine(
@@ -1818,34 +2046,47 @@ class Scene16KLvsSinkhorn(Scene):
             )
             self.wait(TS)
 
-            # Highlight KL infinity issue
-            self.play(Write(kl_infinity), run_time=TW)
+            # Highlight KL and Sinkhorn 
             self.play(
+                Write(kl_infinity),
                 LaggedStart(*[Create(a) for a in transport_arrows], lag_ratio=0.2),
                 Write(sink_value),
                 run_time=TM,
             )
             self.wait(TM2)
 
-            # --- Comparison table ---
-            table_items: List[Tuple[str, str, str]] = [
-                ("KL Divergence", "Diverges when distributions don't overlap", C_FLOW),
-                ("Sinkhorn Distance", "Remains finite and stable", C_B),
-                ("KL Divergence", "Density-based measure", C_FLOW),
-                ("Sinkhorn Distance", "Geometry-based optimal transport", C_B),
-            ]
-            table_group: List[Text] = []
-            for i, (name, desc, color) in enumerate(table_items):
-                row = Text(f"{name}: {desc}", font_size=15, color=color)
-                row.move_to(np.array([0.0, -2.0 - i * 0.35, 0.0]))
-                table_group.append(row)
-
+            # --- Fade out plots to make space ---
             self.play(
-                LaggedStart(*[FadeIn(r) for r in table_group], lag_ratio=0.2),
-                run_time=TM,
+                FadeOut(axes_l), FadeOut(source_kl), FadeOut(target_kl), FadeOut(kl_infinity),
+                FadeOut(axes_r), FadeOut(source_sink), FadeOut(target_sink), FadeOut(sink_value),
+                FadeOut(*transport_arrows),
+                run_time=TM
             )
+
+            # --- Left conclusions (KL) ---
+            kl_points = VGroup(
+                Text("Fails when no overlap", font_size=20, color=C_FLOW),
+                Text("Point-wise comparison", font_size=20, color=C_FLOW),
+            ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+
+            kl_points.move_to(np.array([-3.3, 0.0, 0.0]))
+
+            # --- Right conclusions (Sinkhorn) ---
+            sink_points = VGroup(
+                Text("Works without overlap", font_size=20, color=C_B),
+                Text("Transport-based metric", font_size=20, color=C_B),
+            ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+
+            sink_points.move_to(np.array([3.3, 0.0, 0.0]))
+
+            # --- Animate conclusions ---
+            self.play(
+                FadeIn(kl_points, shift=LEFT),
+                FadeIn(sink_points, shift=RIGHT),
+                run_time=TM
+            )
+
             self.wait(TL)
-            logger.info("Scene16KLvsSinkhorn.construct: done")
 
         except Exception as exc:
             logger.error(f"Scene16 failed: {exc}")
@@ -1887,7 +2128,7 @@ class Scene17WassersteinGAN(Scene):
             wgan_mobjects: List[VGroup] = []
             for i, (item_text, color) in enumerate(wgan_items):
                 t = Text(item_text, font_size=20, color=color)
-                box = SurroundingRectangle(t, color=color, buff=0.15, corner_radius=0.08)
+                box = SurroundingRectangle(t, color=color, buff=0.2, corner_radius=0.1)
                 group = VGroup(box, t)
                 group.move_to(np.array([-3.5, 1.2 - i * 0.95, 0.0]))
                 wgan_mobjects.append(group)
@@ -1900,11 +2141,11 @@ class Scene17WassersteinGAN(Scene):
 
             # --- Mapping arrows (center) ---
             map_arrows: List[Arrow] = []
-            for wg_mob in wgan_mobjects:
+            for i, (wg_mob, color) in enumerate(wgan_items):
                 arr = Arrow(
-                    start=np.array([-1.8, wg_mob.get_center()[1], 0.0]),
-                    end=np.array([-0.2, wg_mob.get_center()[1], 0.0]),
-                    color=C_SOFT,
+                    start=np.array([-1.5, wgan_mobjects[i].get_center()[1], 0.0]),
+                    end=np.array([1.5, wgan_mobjects[i].get_center()[1], 0.0]),
+                    color=color,
                     stroke_width=1.5,
                     buff=0.0,
                 )
@@ -1929,7 +2170,7 @@ class Scene17WassersteinGAN(Scene):
             cdr_mobjects: List[VGroup] = []
             for i, (item_text, color) in enumerate(cdr_items):
                 t = Text(item_text, font_size=20, color=color)
-                box = SurroundingRectangle(t, color=color, buff=0.15, corner_radius=0.08)
+                box = SurroundingRectangle(t, color=color, buff=0.2, corner_radius=0.1)
                 group = VGroup(box, t)
                 group.move_to(np.array([3.5, 1.2 - i * 0.95, 0.0]))
                 cdr_mobjects.append(group)
@@ -1941,12 +2182,9 @@ class Scene17WassersteinGAN(Scene):
             self.wait(TM2)
 
             # --- Concluding note ---
-            conclusion = MathTex(
-                r"\text{SNO3 = implicit Wasserstein alignment } \rightarrow \text{ stable training}",
-                font_size=18, color=C_MATCH,
-            )
-            conclusion.move_to(np.array([0.0, -2.6, 0.0]))
-            self.play(Write(conclusion), run_time=TW)
+            conclusion = "SNO3 induces implicit Wasserstein alignment, leading to stable training"
+            insight = make_insight_box(conclusion)
+            self.play(FadeIn(insight), run_time=TW)
             self.wait(TL)
             logger.info("Scene17WassersteinGAN.construct: done")
 

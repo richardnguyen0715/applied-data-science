@@ -1,0 +1,39 @@
+data:
+  dataset_name: tomas-gajarsky/cifar10-lt
+  config_name: r-20
+  batch_size: 64
+  val_split: 0.1
+  num_workers: 4
+  image_size: 32
+
+gan:
+  latent_dim: 100
+  num_classes: 10
+  learning_rate: 0.0002
+  beta1: 0.5
+  beta2: 0.999
+  epochs: 30
+  critic_iterations: 5
+  generator_hidden_dim: 128
+  discriminator_hidden_dim: 128
+
+vae:
+  latent_dim: 64
+  num_classes: 10
+  learning_rate: 0.001
+  epochs: 30
+  kld_weight: 0.00025
+  encoder_hidden_dim: 256
+  decoder_hidden_dim: 256
+
+classifier:
+  learning_rate: 0.001
+  epochs: 100
+  momentum: 0.9
+  weight_decay: 0.0005
+  architecture: resnet18
+
+random_seed: 42
+device: cuda
+oversampling_ratio: 1.0
+output_dir: outputs
