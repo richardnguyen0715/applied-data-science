@@ -69,15 +69,19 @@ class ExponentialMovingAverage:
         self.shadow = {}
         self.backup = {}
 
-        # Initialize shadow weights
+        # Initialize shadow weights on the correct device
         for name, param in model.named_parameters():
             if param.requires_grad:
-                self.shadow[name] = param.data.clone()
+                self.shadow[name] = param.data.clone().detach()
 
     def update(self) -> None:
         """Update shadow weights."""
         for name, param in self.model.named_parameters():
             if param.requires_grad:
+                # Ensure shadow is on the same device as parameter
+                if self.shadow[name].device != param.device:
+                    self.shadow[name] = self.shadow[name].to(param.device)
+                
                 self.shadow[name].data = (
                     self.decay * self.shadow[name].data
                     + (1 - self.decay) * param.data
@@ -87,6 +91,10 @@ class ExponentialMovingAverage:
         """Apply shadow weights to model."""
         for name, param in self.model.named_parameters():
             if param.requires_grad:
+                # Ensure shadow is on the same device as parameter
+                if self.shadow[name].device != param.device:
+                    self.shadow[name] = self.shadow[name].to(param.device)
+                
                 self.backup[name] = param.data.clone()
                 param.data = self.shadow[name].data
 
@@ -95,3 +103,8 @@ class ExponentialMovingAverage:
         for name, param in self.model.named_parameters():
             if param.requires_grad:
                 param.data = self.backup[name]
+
+    def to(self, device: torch.device) -> None:
+        """Move shadow weights to device."""
+        for name in self.shadow:
+            self.shadow[name] = self.shadow[name].to(device)

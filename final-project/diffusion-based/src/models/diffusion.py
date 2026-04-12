@@ -136,24 +136,25 @@ class DiffusionModel(BaseModel):
         # Predict noise
         predicted_noise = self.model(x_t, t, y)
 
-        # Schedule parameters
-        alpha = self.scheduler.alphas[t]
-        alpha_cumprod = self.scheduler.alphas_cumprod[t]
-        alpha_cumprod_prev = self.scheduler.alphas_cumprod_prev[t]
+        # Schedule parameters - reshape for broadcasting with 4D tensors
+        alpha = self.scheduler.alphas[t].view(batch_size, 1, 1, 1)
+        alpha_cumprod = self.scheduler.alphas_cumprod[t].view(batch_size, 1, 1, 1)
+        alpha_cumprod_prev = self.scheduler.alphas_cumprod_prev[t].view(batch_size, 1, 1, 1)
+        betas = self.scheduler.betas[t].view(batch_size, 1, 1, 1)
+        posterior_variance = self.scheduler.posterior_variance[t].view(batch_size, 1, 1, 1)
 
         # Posterior mean
-        x_0_pred = (x_t - torch.sqrt(1 - alpha_cumprod).unsqueeze(-1).unsqueeze(-1) * predicted_noise) / torch.sqrt(alpha_cumprod).unsqueeze(-1).unsqueeze(-1)
+        x_0_pred = (x_t - torch.sqrt(1 - alpha_cumprod) * predicted_noise) / torch.sqrt(alpha_cumprod)
         
         mean = (
-            torch.sqrt(alpha_cumprod_prev).unsqueeze(-1).unsqueeze(-1) * self.scheduler.betas[t].unsqueeze(-1).unsqueeze(-1) * x_0_pred
-            + torch.sqrt(alpha).unsqueeze(-1).unsqueeze(-1) * (1 - alpha_cumprod_prev).unsqueeze(-1).unsqueeze(-1) * x_t
-        ) / (1 - alpha_cumprod).unsqueeze(-1).unsqueeze(-1)
+            torch.sqrt(alpha_cumprod_prev) * betas * x_0_pred
+            + torch.sqrt(alpha) * (1 - alpha_cumprod_prev) * x_t
+        ) / (1 - alpha_cumprod)
 
         # Add noise if not at last step
         if t[0] > 0:
             noise = torch.randn_like(x_t)
-            variance = self.scheduler.posterior_variance[t].unsqueeze(-1).unsqueeze(-1)
-            return mean + torch.sqrt(variance) * noise
+            return mean + torch.sqrt(posterior_variance) * noise
         else:
             return mean
 
@@ -200,6 +201,20 @@ class DiffusionModel(BaseModel):
 
         samples = torch.cat(all_samples, dim=0)
         return samples
+
+    def to(self, device: torch.device) -> "DiffusionModel":
+        """
+        Move model and scheduler to device.
+
+        Args:
+            device: Target device.
+
+        Returns:
+            Self (for chaining).
+        """
+        super().to(device)
+        self.scheduler.to(device)
+        return self
 
     def get_ema_model(self) -> nn.Module:
         """

@@ -395,33 +395,3 @@ python -c "import torch; print(torch.cuda.is_available())"
 # Run on CPU (slower):
 # Modify training scripts to use device='cpu'
 ```
-
-## Citation
-
-If you use this project, please cite:
-
-```bibtex
-@software{diffusion_cifar10lt_2024,
-  title={Diffusion-Based Oversampling for Imbalanced CIFAR-10-LT},
-  author={Your Name},
-  year={2024},
-  url={https://github.com/your-repo}
-}
-```
-
-## References
-
-1. Ho et al. (2020) - Denoising Diffusion Probabilistic Models
-2. Song et al. (2021) - Diffusion Models Beat GANs on Image Synthesis
-3. Dhariwal & Nichol (2021) - Diffusion Models Beat GANs on Image Synthesis (improved)
-4. Kawczyński et al. (2021) - CIFAR-10-LT Dataset
-
-## License
-
-MIT License - See LICENSE file
-
-## Acknowledgments
-
-- HuggingFace for the CIFAR-10-LT dataset
-- PyTorch team for the deep learning framework
-- Academic and research community for diffusion model innovations
