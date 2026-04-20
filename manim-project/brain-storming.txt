@@ -1,0 +1,3 @@
+- Scene thì lồng tiếng luôn chung luôn thay vì kết thúc mới lồng tiếng
+- Bổ sung thêm Soft-NO3, KL-divergence
+- Chỉnh đồng bộ tốc độ giữa các scence
