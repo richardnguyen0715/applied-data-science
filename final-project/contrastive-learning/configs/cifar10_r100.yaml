@@ -1,0 +1,57 @@
+# Configuration for CIFAR-10-LT experiment (Imbalance ratio: 100:1)
+# This is an alias for default.yaml
+
+data:
+  dataset_name: "cifar10-lt"
+  cifar10_config: "r-100"
+  image_size: 32
+  num_classes: 10
+  num_workers: 4
+
+augmentation:
+  horizontal_flip: true
+  crop_size: 32
+  crop_padding: 4
+
+encoder:
+  architecture: "resnet18"
+  projection_dim: 128
+  hidden_dim: 2048
+  num_layers: 2
+  use_bn: true
+
+contrastive_loss:
+  loss_type: "nt_xent"
+  temperature: 0.07
+  use_cosine_similarity: true
+
+contrastive_training:
+  batch_size: 128
+  num_epochs: 200
+  learning_rate: 0.5
+  weight_decay: 0.0001
+  momentum: 0.9
+  cosine_annealing: true
+  warmup_epochs: 10
+
+classifier_training:
+  batch_size: 128
+  num_epochs: 100
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  momentum: 0.9
+  patience: 20
+
+classifier:
+  num_classes: 10
+  hidden_dim: null
+  num_layers: 2
+
+evaluation:
+  eval_batch_size: 128
+  num_classes: 10
+  compute_confusion_matrix: true
+
+seed: 42
+output_dir: "outputs/cifar10-lt-r100"
+device: "cuda"

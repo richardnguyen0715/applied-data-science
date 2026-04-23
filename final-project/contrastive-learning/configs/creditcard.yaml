@@ -1,0 +1,50 @@
+# Configuration for Credit Card Fraud Detection (Tabular Dataset)
+# Note: Tabular data, no augmentation applied
+
+data:
+  dataset_name: "credit-card-fraud"
+  num_classes: 2
+  num_workers: 4
+
+encoder:
+  architecture: "resnet18"
+  projection_dim: 128
+  hidden_dim: 2048
+  num_layers: 2
+  use_bn: true
+
+contrastive_loss:
+  loss_type: "nt_xent"
+  temperature: 0.07
+  use_cosine_similarity: true
+
+contrastive_training:
+  batch_size: 128
+  num_epochs: 100
+  learning_rate: 0.5
+  weight_decay: 0.0001
+  momentum: 0.9
+  cosine_annealing: true
+  warmup_epochs: 5
+
+classifier_training:
+  batch_size: 128
+  num_epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  momentum: 0.9
+  patience: 15
+
+classifier:
+  num_classes: 2
+  hidden_dim: null
+  num_layers: 2
+
+evaluation:
+  eval_batch_size: 128
+  num_classes: 2
+  compute_confusion_matrix: true
+
+seed: 42
+output_dir: "outputs/credit-card-fraud"
+device: "cuda"
