@@ -101,14 +101,13 @@ def train_classifier(
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}")
 
-        for batch_idx, batch in enumerate(pbar):
-            x, labels = batch
-            x = x.to(device)
+        for batch_idx, (images, labels) in enumerate(pbar):
+            images = images.to(device)
             labels = labels.to(device)
 
             # Forward pass
             optimizer.zero_grad()
-            logits = model(x)
+            logits = model(images)
 
             # Compute loss
             loss = criterion(logits, labels)
@@ -160,11 +159,11 @@ def train_classifier(
 
             with torch.no_grad():
                 for batch in val_loader:
-                    x, labels = batch
-                    x = x.to(device)
+                    images, labels = batch
+                    images = images.to(device)
                     labels = labels.to(device)
 
-                    logits = model(x)
+                    logits = model(images)
                     loss = criterion(logits, labels)
 
                     val_loss += loss.item()

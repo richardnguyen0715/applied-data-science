@@ -150,11 +150,11 @@ class SupConLoss(nn.Module):
                     pos_mask[i - batch_size] = True
                     neg_mask = ~pos_mask & (~mask[i])
 
-            pos_sim = similarity[i, pos_mask].sum()
+            pos_sim = torch.exp(similarity[i, pos_mask]).sum()
             neg_sim = torch.exp(similarity[i, neg_mask]).sum()
 
             if pos_mask.sum() > 0:
-                loss -= torch.log(torch.exp(pos_sim) / (torch.exp(pos_sim) + neg_sim))
+                loss -= torch.log(pos_sim / (pos_sim + neg_sim))
 
         loss = loss / (2 * batch_size)
 

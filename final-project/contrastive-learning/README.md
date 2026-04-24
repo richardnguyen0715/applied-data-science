@@ -91,7 +91,7 @@ python verify_setup.py
 ### Train on CIFAR-10-LT
 
 ```bash
-python main.py --config configs/default.yaml --dataset cifar10-lt
+python main.py --config configs/cifar10_r100.yaml --dataset cifar10-lt
 ```
 
 ### Train on Credit Card Dataset

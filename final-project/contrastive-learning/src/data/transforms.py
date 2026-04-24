@@ -3,40 +3,40 @@
 import torchvision.transforms as transforms
 
 
-def get_cifar10_augmentation(
+def get_cifar10_transform(
+    train: bool = True,
     image_size: int = 32,
     horizontal_flip: bool = True,
     crop_padding: int = 4,
 ) -> transforms.Compose:
     """
-    Get minimal contrastive learning augmentation pipeline for CIFAR-10.
-    
-    Only applies:
-    - RandomCrop with padding
-    - RandomHorizontalFlip
-    
+    Get CIFAR-10 transformation pipeline for train/test.
+
     Args:
+        train: Whether to use training augmentation.
         image_size: Size of the image.
-        horizontal_flip: Whether to apply horizontal flip.
-        crop_padding: Padding for random crop.
-        
+        horizontal_flip: Whether to apply horizontal flip (train only).
+        crop_padding: Padding for random crop (train only).
+
     Returns:
-        Augmentation pipeline.
+        Transformation pipeline.
     """
-    augmentation = [
-        transforms.RandomCrop(image_size, padding=crop_padding),
-        transforms.RandomHorizontalFlip(p=0.5 if horizontal_flip else 0.0),
+    if train:
+        transform_list = [
+            transforms.RandomCrop(image_size, padding=crop_padding),
+            transforms.RandomHorizontalFlip(p=0.5 if horizontal_flip else 0.0),
+        ]
+    else:
+        transform_list = []
+
+    transform_list.extend([
         transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.4914, 0.4822, 0.4465],
-            std=[0.2023, 0.1994, 0.2010],
-        ),
-    ]
-    
-    return transforms.Compose(augmentation)
+    ])
+
+    return transforms.Compose(transform_list)
 
 
-def get_creditcard_transform():
+def get_creditcard_transform() -> transforms.Compose:
     """
     Get transformation for credit card fraud dataset (tabular data).
     
@@ -45,31 +45,5 @@ def get_creditcard_transform():
     Returns:
         Identity transformation (returns input unchanged).
     """
-    return lambda x: x
-
-
-def get_base_transform(dataset_name: str = "cifar10-lt") -> transforms.Compose:
-    """
-    Get base transformation (no augmentation) for evaluation.
-    
-    Args:
-        dataset_name: Name of the dataset.
-        
-    Returns:
-        Base transformation pipeline.
-    """
-    if dataset_name == "cifar10-lt":
-        return transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.4914, 0.4822, 0.4465],
-                std=[0.2023, 0.1994, 0.2010],
-            ),
-        ])
-    else:
-        return transforms.Compose([
-            transforms.ToTensor(),
-        ])
-
-
+    return transforms.Compose([])
 

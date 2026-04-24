@@ -81,11 +81,6 @@ def run_contrastive_pipeline(
             transform=None,
             dataset_config=config.data.cifar10_config,
         )
-        test_dataset = CIFAR10LTContrastiveDataset(
-            split="test",
-            transform=test_transform,
-            dataset_config=config.data.cifar10_config,
-        )
 
         # Create augmented datasets for contrastive learning
         train_dataset_contrastive = CIFAR10LTContrastiveDataset(
@@ -93,6 +88,14 @@ def run_contrastive_pipeline(
             transform=train_transform,
             dataset_config=config.data.cifar10_config,
         )
+
+        test_dataset = CIFAR10LTContrastiveDataset(
+            split="test",
+            transform=test_transform,
+            dataset_config=config.data.cifar10_config,
+        )
+
+        
 
     elif config.data.dataset_name == "credit-card-fraud":
         # Load Credit Card Fraud Detection (no augmentation for tabular data)
@@ -105,11 +108,13 @@ def run_contrastive_pipeline(
             transform=None,
             normalize=True,
         )
+
         train_dataset_contrastive = CreditCardFraudDataset(
             split="train",
             transform=train_transform,
             normalize=True,
         )
+
         test_dataset = CreditCardFraudDataset(
             split="test",
             transform=test_transform,
@@ -245,10 +250,18 @@ def run_contrastive_pipeline(
 
     feature_extractor.eval()
     with torch.no_grad():
-        for batch in train_loader:
-            x, labels = batch
-            x = x.to(device)
-            features = feature_extractor(x)
+         for (x_i, x_j), labels in train_loader:
+            x_i = x_i.to(device)
+            x_j = x_j.to(device)
+            labels = labels.to(device)
+
+            # Concatenate 2 views
+            images = torch.cat([x_i, x_j], dim=0)   
+            features = feature_extractor(images)
+
+            # Duplicate labels
+            labels = torch.cat([labels, labels], dim=0)
+
             feature_list.append(features.cpu())
             label_list.append(labels.cpu())
 
@@ -323,12 +336,20 @@ def run_contrastive_pipeline(
 
     feature_extractor.eval()
     with torch.no_grad():
-        for batch in test_loader:
-            x, labels = batch
-            x = x.to(device)
-            features = feature_extractor(x)
-            test_features.append(features.cpu())
-            test_labels.append(labels.cpu())
+         for (x_i, x_j), labels in test_loader:
+            x_i = x_i.to(device)
+            x_j = x_j.to(device)
+            labels = labels.to(device)
+
+            # Concatenate 2 views
+            images = torch.cat([x_i, x_j], dim=0)   
+            features = feature_extractor(images)    
+
+            # Duplicate labels
+            labels = torch.cat([labels, labels], dim=0)
+
+            feature_list.append(features.cpu())
+            label_list.append(labels.cpu())
 
     test_features = torch.cat(test_features, dim=0)
     test_labels = torch.cat(test_labels, dim=0)

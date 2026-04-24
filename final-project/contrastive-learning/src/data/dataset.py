@@ -177,7 +177,7 @@ class CreditCardFraudDataset(ContrastiveDataset):
         label = self.labels[idx].item()
 
         if self.transform is not None:
-            # For tabular data, apply transform twice (though IdentityTransform)
+            # For tabular data, apply IdentityTransform (no augmentation) to get two identical views
             x_i = self.transform(x)
             x_j = self.transform(x)
             return (x_i, x_j), label

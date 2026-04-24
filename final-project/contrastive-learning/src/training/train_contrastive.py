@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from src.models.encoder import ContrastiveEncoder
-from src.training.losses import NTXentLoss
+from src.training.losses import SupConLoss
 from src.utils.logger import get_logger, setup_logger
 
 
@@ -30,6 +30,7 @@ def train_contrastive_encoder(
     log_every_n_steps: int = 10,
     save_every_n_epochs: int = 10,
     gradient_clip_val: float = 0.0,
+    patience: int = 20,
 ) -> Dict[str, list]:
     """
     Train contrastive encoder.
@@ -74,7 +75,7 @@ def train_contrastive_encoder(
     )
 
     # Setup loss
-    criterion = NTXentLoss(temperature=temperature)
+    criterion = SupConLoss(temperature=temperature)
 
     # Setup scheduler
     scheduler = None
@@ -113,6 +114,7 @@ def train_contrastive_encoder(
         for batch_idx, ((x_i, x_j), labels) in enumerate(pbar):
             x_i = x_i.to(device)
             x_j = x_j.to(device)
+            labels = labels.to(device)
 
             # Forward pass
             optimizer.zero_grad()
@@ -120,7 +122,7 @@ def train_contrastive_encoder(
             _, z_j = model(x_j)
 
             # Compute loss
-            loss = criterion(z_i, z_j)
+            loss = criterion(z_i, z_j, labels)
 
             # Backward pass
             loss.backward()
@@ -164,10 +166,12 @@ def train_contrastive_encoder(
                 for (x_i, x_j), labels in val_loader:
                     x_i = x_i.to(device)
                     x_j = x_j.to(device)
+                    labels = labels.to(device)
 
                     _, z_i = model(x_i)
                     _, z_j = model(x_j)
-                    loss = criterion(z_i, z_j)
+
+                    loss = criterion(z_i, z_j, labels)
 
                     val_loss += loss.item()
                     num_val_batches += 1
@@ -193,6 +197,11 @@ def train_contrastive_encoder(
                     logger.info(f"Saved best model to {checkpoint_path}")
                 else:
                     no_improve_epochs += 1
+
+                # Early stopping
+                if no_improve_epochs >= patience:
+                    logger.info(f"Early stopping at epoch {epoch+1}")
+                    break
 
         # Save checkpoint periodically
         if checkpoint_dir is not None and (epoch + 1) % save_every_n_epochs == 0:
