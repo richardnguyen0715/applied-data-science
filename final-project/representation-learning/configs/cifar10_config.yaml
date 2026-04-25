@@ -1,0 +1,39 @@
+# CIFAR10 Dataset Configuration
+
+dataset:
+  name: cifar10
+  download_dir: data/cifar10
+  num_classes: 10
+  image_size: 32
+  num_channels: 3
+
+preprocessing:
+  normalize:
+    mean: [0.4914, 0.4822, 0.4465]
+    std: [0.2023, 0.1994, 0.2010]
+  resize: 32
+  augmentation:
+    enabled: true
+    random_flip: true
+    random_crop: true
+    color_jitter: true
+
+training:
+  batch_size: 128
+  num_epochs: 100
+  learning_rate: 0.1
+  weight_decay: 1e-4
+  optimizer: sgd
+  scheduler: cosine
+  train_split: 0.9
+  val_split: 0.1
+
+model:
+  architecture: resnet18
+  pretrained: false
+  dropout: 0.1
+
+logging:
+  log_dir: logs/cifar10
+  checkpoint_dir: results/cifar10/checkpoints
+  tensorboard: true

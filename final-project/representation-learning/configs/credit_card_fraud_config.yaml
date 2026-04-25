@@ -1,0 +1,52 @@
+# Credit Card Fraud Detection Configuration
+
+dataset:
+  name: credit_card_fraud
+  csv_path: data/credit_card_fraud/creditcard.csv
+  source: kaggle
+  
+preprocessing:
+  test_size: 0.2
+  val_size: 0.2
+  random_state: 42
+  scaling: standardscaler
+  handle_imbalance: true
+  imbalance_method: smote  # or oversampling, undersampling
+  
+feature_engineering:
+  drop_features: [Time]
+  keep_amount: true
+  normalize_amount: true
+  
+training:
+  batch_size: 64
+  num_epochs: 50
+  learning_rate: 0.001
+  weight_decay: 1e-5
+  optimizer: adam
+  early_stopping:
+    enabled: true
+    patience: 10
+    metric: auc
+
+model:
+  architecture: feedforward  # or ensemble, lstm
+  hidden_layers: [64, 32, 16]
+  dropout: 0.3
+  activation: relu
+  output_activation: sigmoid
+
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - roc_auc
+    - confusion_matrix
+  threshold: 0.5
+
+logging:
+  log_dir: logs/credit_card_fraud
+  checkpoint_dir: results/credit_card_fraud/checkpoints
+  save_predictions: true
