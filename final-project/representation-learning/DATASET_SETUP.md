@@ -30,9 +30,10 @@ bash scripts/quick_setup.sh
 ```
 
 This will:
-1. ✓ Install Python dependencies
+1. ✓ Install Python dependencies (including kagglehub)
 2. ✓ Download and verify CIFAR10
-3. ✓ Verify existing datasets or provide instructions
+3. ✓ Attempt automatic fraud dataset download
+4. ✓ Verify everything works
 
 ### Option 2: Dataset-Only Setup
 If dependencies are already installed:
@@ -52,13 +53,13 @@ bash scripts/setup_datasets.sh --verify-only
 
 ## Manual Setup for Credit Card Fraud Dataset
 
-The Credit Card Fraud dataset requires manual download due to Kaggle's terms of service.
+The Credit Card Fraud dataset requires manual download from Kaggle using `kagglehub`.
 
-### Method 1: Kaggle CLI (Recommended)
+### Method 1: Automatic Download Helper (Recommended)
 
 **Prerequisites:**
 ```bash
-pip install kaggle
+pip install kagglehub
 ```
 
 **Setup Credentials:**
@@ -76,12 +77,23 @@ pip install kaggle
 bash scripts/download_fraud_dataset.sh
 ```
 
-Or manually:
+Or manually with Python:
 ```bash
-cd data/credit_card_fraud
-kaggle datasets download -d mlg-ulb/creditcardfraud
-unzip creditcardfraud.zip
-rm creditcardfraud.zip
+python3 << 'EOF'
+import kagglehub
+from pathlib import Path
+import shutil
+
+# Download
+path = kagglehub.dataset_download("mlg-ulb/creditcardfraud")
+print(f"Downloaded to: {path}")
+
+# Copy CSV to project
+source_csv = Path(path) / 'creditcard.csv'
+target_csv = Path('data/credit_card_fraud') / 'creditcard.csv'
+shutil.copy(source_csv, target_csv)
+print(f"Copied to: {target_csv}")
+EOF
 ```
 
 ### Method 2: Manual Download
@@ -89,7 +101,7 @@ rm creditcardfraud.zip
 1. Go to: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 2. Click "Download" button
 3. Extract the ZIP file to `data/credit_card_fraud/`
-4. Verify the file structure (see below)
+4. Verify file is named `creditcard.csv`
 
 ---
 

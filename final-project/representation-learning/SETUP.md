@@ -61,11 +61,11 @@ python3 src/preprocessing/download_datasets.py --verify-only
 The dataset is available on [Kaggle](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud)
 and requires authentication to download.
 
-#### Method 1: Using Kaggle CLI (Easiest)
+#### Method 1: Using kagglehub (Easiest & Recommended)
 
-**Step 1: Install Kaggle**
+**Step 1: Install kagglehub**
 ```bash
-pip install kaggle
+pip install kagglehub
 ```
 
 **Step 2: Setup Kaggle API credentials**
@@ -83,12 +83,21 @@ pip install kaggle
 bash scripts/download_fraud_dataset.sh
 ```
 
-Or manually:
-```bash
-cd data/credit_card_fraud
-kaggle datasets download -d mlg-ulb/creditcardfraud
-unzip creditcardfraud.zip
-rm creditcardfraud.zip
+Or manually with Python:
+```python
+import kagglehub
+from pathlib import Path
+import shutil
+
+# Download dataset
+path = kagglehub.dataset_download("mlg-ulb/creditcardfraud")
+
+# Copy CSV to project
+source_csv = Path(path) / 'creditcard.csv'
+target_csv = Path('data/credit_card_fraud/creditcard.csv')
+shutil.copy(source_csv, target_csv)
+
+print(f"Dataset ready at: {target_csv}")
 ```
 
 #### Method 2: Manual Download

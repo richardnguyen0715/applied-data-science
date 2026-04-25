@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #################################################################################
-# Kaggle Dataset Download Helper
+# Kagglehub Dataset Download Helper
 #
-# This script helps download the Credit Card Fraud dataset using Kaggle CLI
+# This script helps download the Credit Card Fraud dataset using kagglehub
 #
 # Setup:
-#   1. Install kaggle: pip install kaggle
+#   1. Install kagglehub: pip install kagglehub
 #   2. Create Kaggle API token: https://www.kaggle.com/settings/account
 #   3. Place kaggle.json in ~/.kaggle/
 #   4. Run this script
@@ -19,18 +19,18 @@ PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 DATA_DIR="$PROJECT_ROOT/data/credit_card_fraud"
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║  Kaggle Dataset Download Helper                           ║"
+echo "║  Kagglehub Dataset Download Helper                        ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
-# Check if kaggle is installed
-if ! command -v kaggle &> /dev/null; then
-    echo "✗ Kaggle CLI not found"
-    echo "Install it with: pip install kaggle"
+# Check if kagglehub is installed
+python3 -c "import kagglehub" 2>/dev/null || {
+    echo "✗ kagglehub not found"
+    echo "Install it with: pip install kagglehub"
     exit 1
-fi
+}
 
-echo "✓ Kaggle CLI found"
+echo "✓ kagglehub found"
 echo ""
 
 # Check if kaggle.json exists
@@ -51,20 +51,35 @@ echo ""
 
 # Create data directory
 mkdir -p "$DATA_DIR"
-echo "Downloading Credit Card Fraud dataset to: $DATA_DIR"
+echo "Downloading Credit Card Fraud dataset using kagglehub..."
+echo "Target: $DATA_DIR"
 echo ""
 
-# Download dataset
-cd "$DATA_DIR"
-kaggle datasets download -d mlg-ulb/creditcardfraud
+# Download using kagglehub
+python3 << 'PYTHON'
+import kagglehub
+from pathlib import Path
+import shutil
 
-# Unzip
-if [ -f creditcardfraud.zip ]; then
-    echo "Extracting dataset..."
-    unzip -q creditcardfraud.zip
-    rm creditcardfraud.zip
-    echo "✓ Dataset extracted successfully"
-else
+print("Downloading dataset...")
+path = kagglehub.dataset_download("mlg-ulb/creditcardfraud")
+print(f"✓ Dataset downloaded to: {path}")
+
+# Copy CSV to our directory
+source_csv = Path(path) / 'creditcard.csv'
+target_csv = Path("'$DATA_DIR'") / 'creditcard.csv'
+
+if source_csv.exists():
+    print(f"Copying creditcard.csv...")
+    shutil.copy(source_csv, target_csv)
+    print(f"✓ File copied to: {target_csv}")
+    print(f"✓ File size: {target_csv.stat().st_size / (1024*1024):.1f} MB")
+else:
+    print(f"✗ creditcard.csv not found in {path}")
+    exit(1)
+PYTHON
+
+if [ $? -ne 0 ]; then
     echo "✗ Download failed"
     exit 1
 fi
@@ -73,5 +88,5 @@ echo ""
 echo "✓ Credit Card Fraud dataset ready!"
 echo "Location: $DATA_DIR/creditcard.csv"
 echo ""
-echo "Run setup verification:"
+echo "Run verification:"
 echo "  ./scripts/setup_datasets.sh --verify-only"
