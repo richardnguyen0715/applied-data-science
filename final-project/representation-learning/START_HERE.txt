@@ -1,0 +1,229 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                          🚀 START HERE 🚀                                ║
+║                                                                           ║
+║            Complete ML Project with Dataset Pipeline Setup               ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+⚡ ONE-COMMAND SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  bash scripts/quick_setup.sh
+
+  This will:
+    ✓ Install Python dependencies
+    ✓ Download CIFAR10 dataset (175 MB)
+    ✓ Create working directories
+    ✓ Verify everything works
+
+
+📚 READ THESE GUIDES (in order)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. QUICK_REFERENCE.txt (2 min read)
+     └─ One-page cheat sheet for commands & file locations
+
+  2. SETUP.md (10 min read) ⭐ MOST IMPORTANT
+     └─ Complete installation guide, examples, troubleshooting
+
+  3. DATASET_SETUP.md (5 min read)
+     └─ Dataset details, how to download fraud data
+
+  4. FILES_MANIFEST.md (reference)
+     └─ Complete file inventory & dependencies
+
+
+🎯 TYPICAL WORKFLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Step 1: Read SETUP.md (5-10 min)
+    ↓
+  Step 2: Run quick_setup.sh (5-10 min)
+    ↓
+  Step 3: Download fraud data [OPTIONAL] (2-5 min)
+    ↓
+  Step 4: Verify everything works (1 min)
+    ↓
+  Step 5: Start using the datasets in your code
+    ↓
+  Done! 🎉
+
+
+✨ WHAT YOU GET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✓ CIFAR10 dataset (auto-downloaded)
+    • 60,000 images (50K train + 10K test)
+    • 10 classes, 32×32 pixels, RGB
+    • Automatic download & verification
+    • Status: READY
+
+  ✓ Credit Card Fraud dataset (manual from Kaggle)
+    • 284,807 transactions
+    • 30 features
+    • Imbalanced classification (0.17% fraud)
+    • Status: SETUP AVAILABLE
+
+  ✓ Data loaders in Python
+    • Ready-to-use processors
+    • Configurable via YAML
+    • Splits (train/val/test)
+    • Augmentation support
+
+  ✓ Model definitions
+    • ResNet18 & SimpleCNN for CIFAR10
+    • Feedforward & LSTM for fraud detection
+    • Ready to train
+
+
+💻 QUICK PYTHON EXAMPLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Load CIFAR10:
+    from src.preprocessing.cifar10_processor import CIFAR10Processor
+    processor = CIFAR10Processor(config)
+    train_loader, test_loader = processor.get_dataloaders(batch_size=128)
+
+  Load Fraud Data:
+    from src.preprocessing.fraud_processor import FraudProcessor
+    processor = FraudProcessor(config)
+    X, y = processor.preprocess(processor.load_data('data/credit_card_fraud/creditcard.csv'))
+
+  Verify Datasets:
+    python3 src/preprocessing/download_datasets.py --verify-only
+
+
+📋 KEY FILES & FOLDERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Documentation:
+    QUICK_REFERENCE.txt ........... Commands cheat sheet
+    SETUP.md ...................... Complete guide ⭐
+    DATASET_SETUP.md .............. Dataset help
+    PIPELINE_SUMMARY.md ........... Technical details
+    FILES_MANIFEST.md ............. File inventory
+
+  Automation:
+    scripts/quick_setup.sh ........ One-command setup ⭐
+    scripts/setup_datasets.sh ..... Dataset manager
+    scripts/download_fraud_dataset.sh . Kaggle helper
+
+  Source Code:
+    src/preprocessing/download_datasets.py .. Main downloader ⭐
+    src/preprocessing/cifar10_processor.py .. CIFAR10 loader
+    src/preprocessing/fraud_processor.py ... Fraud loader
+    src/models/ ................... Model definitions
+    src/training/ ................. Training utilities
+    src/utils/ .................... Helpers
+
+  Configuration:
+    configs/cifar10_config.yaml .............. Customize here ⭐
+    configs/credit_card_fraud_config.yaml ... Customize here ⭐
+
+  Datasets:
+    data/cifar10/ ..................... Auto-downloaded
+    data/credit_card_fraud/ ........... Manual download
+
+
+🔧 COMMON COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Full setup:
+    bash scripts/quick_setup.sh
+
+  Download only:
+    bash scripts/setup_datasets.sh
+
+  Verify only:
+    bash scripts/setup_datasets.sh --verify-only
+    python3 src/preprocessing/download_datasets.py --verify-only
+
+  Download fraud data (needs Kaggle):
+    bash scripts/download_fraud_dataset.sh
+
+  See all options:
+    bash scripts/setup_datasets.sh --help
+
+
+❓ TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Issue: Setup fails
+  Solution: Read SETUP.md troubleshooting section
+
+  Issue: Download is slow
+  Solution: Check internet, try again (resumes automatically)
+
+  Issue: Kaggle API not working
+  Solution: See DATASET_SETUP.md for setup instructions
+
+  Issue: Can't find datasets
+  Solution: Run with --verify-only flag
+
+  → See QUICK_REFERENCE.txt for more troubleshooting
+
+
+🎓 LEARNING PATH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Beginner:
+    1. Read QUICK_REFERENCE.txt (understand what you have)
+    2. Run bash scripts/quick_setup.sh (set up everything)
+    3. Read SETUP.md (understand how it works)
+    4. Use examples from SETUP.md (load & use data)
+
+  Intermediate:
+    1. Customize configs/cifar10_config.yaml
+    2. Create your own training scripts
+    3. Explore src/preprocessing/ to understand data loading
+    4. Read PIPELINE_SUMMARY.md (technical details)
+
+  Advanced:
+    1. Modify src/preprocessing/ for custom processing
+    2. Create new data processors
+    3. Implement custom models
+    4. Read FILES_MANIFEST.md (complete overview)
+
+
+✅ SETUP CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Before running setup:
+    ☐ Have Python 3.8+ installed
+    ☐ Have ~500 MB disk space
+    ☐ Have internet connection
+
+  Run setup:
+    ☐ bash scripts/quick_setup.sh
+
+  After setup:
+    ☐ CIFAR10 downloaded to data/cifar10/
+    ☐ No errors in output
+    ☐ Dependencies installed successfully
+    ☐ Can run: python3 src/preprocessing/download_datasets.py --verify-only
+
+  Optional - fraud dataset:
+    ☐ Create Kaggle API credentials
+    ☐ Run bash scripts/download_fraud_dataset.sh
+    ☐ Verify: ls data/credit_card_fraud/creditcard.csv
+
+
+🚀 READY? START HERE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Read: SETUP.md (10 minutes)
+  2. Run: bash scripts/quick_setup.sh (5-10 minutes)
+  3. Enjoy!
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Questions? Check these files in order:
+  1. QUICK_REFERENCE.txt ← For quick answers
+  2. SETUP.md ← For detailed help
+  3. DATASET_SETUP.md ← For dataset issues
+  4. PIPELINE_SUMMARY.md ← For technical details
+
+Need more help? All guides have troubleshooting sections!
+
+═══════════════════════════════════════════════════════════════════════════════
