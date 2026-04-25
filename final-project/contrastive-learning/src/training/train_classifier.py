@@ -97,7 +97,6 @@ def train_classifier(
         train_loss = 0.0
         train_correct = 0
         train_total = 0
-        num_batches = 0
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}")
 
@@ -125,17 +124,14 @@ def train_classifier(
             _, predicted = torch.max(logits, 1)
             train_correct += (predicted == labels).sum().item()
             train_total += labels.size(0)
-            num_batches += 1
 
             if (batch_idx + 1) % log_every_n_steps == 0:
-                avg_loss = train_loss / num_batches
-                avg_acc = 100 * train_correct / train_total
-                pbar.set_postfix({"loss": f"{avg_loss:.4f}", "acc": f"{avg_acc:.2f}%"})
+                train_acc = 100 * train_correct / train_total
+                pbar.set_postfix({"loss": f"{train_loss:.4f}", "acc": f"{train_acc:.2f}%"})
 
-        avg_train_loss = train_loss / num_batches
-        avg_train_acc = 100 * train_correct / train_total
-        history["train_loss"].append(avg_train_loss)
-        history["train_acc"].append(avg_train_acc)
+        train_acc = 100 * train_correct / train_total
+        history["train_loss"].append(train_loss)
+        history["train_acc"].append(train_acc)
 
         # Learning rate step
         scheduler.step()
@@ -144,8 +140,8 @@ def train_classifier(
 
         logger.info(
             f"Epoch {epoch+1}/{num_epochs} - "
-            f"Train Loss: {avg_train_loss:.4f} - "
-            f"Train Acc: {avg_train_acc:.2f}% - "
+            f"Train Loss: {train_loss:.4f} - "
+            f"Train Acc: {train_acc:.2f}% - "
             f"LR: {current_lr:.6f}"
         )
 
@@ -155,7 +151,6 @@ def train_classifier(
             val_loss = 0.0
             val_correct = 0
             val_total = 0
-            num_val_batches = 0
 
             with torch.no_grad():
                 for batch in val_loader:
@@ -170,22 +165,20 @@ def train_classifier(
                     _, predicted = torch.max(logits, 1)
                     val_correct += (predicted == labels).sum().item()
                     val_total += labels.size(0)
-                    num_val_batches += 1
 
-            avg_val_loss = val_loss / num_val_batches
-            avg_val_acc = 100 * val_correct / val_total
-            history["val_loss"].append(avg_val_loss)
-            history["val_acc"].append(avg_val_acc)
+            val_acc = 100 * val_correct / val_total
+            history["val_loss"].append(val_loss)
+            history["val_acc"].append(val_acc)
 
             logger.info(
-                f"Val Loss: {avg_val_loss:.4f} - "
-                f"Val Acc: {avg_val_acc:.2f}%"
+                f"Val Loss: {val_loss:.4f} - "
+                f"Val Acc: {val_acc:.2f}%"
             )
 
             # Save checkpoint if val acc improved
             if checkpoint_dir is not None:
-                if avg_val_acc > best_val_acc:
-                    best_val_acc = avg_val_acc
+                if val_acc > best_val_acc:
+                    best_val_acc = val_acc
                     no_improve_epochs = 0
 
                     checkpoint_path = checkpoint_dir / "best_model.pt"
@@ -193,7 +186,7 @@ def train_classifier(
                         "epoch": epoch,
                         "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
-                        "accuracy": avg_val_acc,
+                        "accuracy": val_acc,
                     }, checkpoint_path)
                     logger.info(f"Saved best model to {checkpoint_path}")
                 else:

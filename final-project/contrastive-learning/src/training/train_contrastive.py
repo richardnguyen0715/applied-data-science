@@ -107,7 +107,6 @@ def train_contrastive_encoder(
         # Training phase
         model.train()
         train_loss = 0.0
-        num_batches = 0
 
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}")
 
@@ -134,14 +133,11 @@ def train_contrastive_encoder(
             optimizer.step()
 
             train_loss += loss.item()
-            num_batches += 1
 
             if (batch_idx + 1) % log_every_n_steps == 0:
-                avg_loss = train_loss / num_batches
-                pbar.set_postfix({"loss": f"{avg_loss:.4f}"})
+                pbar.set_postfix({"loss": f"{train_loss:.4f}"})
 
-        avg_train_loss = train_loss / num_batches
-        history["train_loss"].append(avg_train_loss)
+        history["train_loss"].append(train_loss)
 
         # Learning rate step
         if scheduler is not None:
@@ -152,7 +148,7 @@ def train_contrastive_encoder(
 
         logger.info(
             f"Epoch {epoch+1}/{num_epochs} - "
-            f"Train Loss: {avg_train_loss:.4f} - "
+            f"Train Loss: {train_loss:.4f} - "
             f"LR: {current_lr:.6f}"
         )
 
@@ -160,7 +156,6 @@ def train_contrastive_encoder(
         if val_loader is not None:
             model.eval()
             val_loss = 0.0
-            num_val_batches = 0
 
             with torch.no_grad():
                 for (x_i, x_j), labels in val_loader:
@@ -174,17 +169,15 @@ def train_contrastive_encoder(
                     loss = criterion(z_i, z_j, labels)
 
                     val_loss += loss.item()
-                    num_val_batches += 1
 
-            avg_val_loss = val_loss / num_val_batches
-            history["val_loss"].append(avg_val_loss)
+            history["val_loss"].append(val_loss)
 
-            logger.info(f"Val Loss: {avg_val_loss:.4f}")
+            logger.info(f"Val Loss: {val_loss:.4f}")
 
             # Save checkpoint if val loss improved
             if checkpoint_dir is not None:
-                if avg_val_loss < best_val_loss:
-                    best_val_loss = avg_val_loss
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
                     no_improve_epochs = 0
 
                     checkpoint_path = checkpoint_dir / "best_model.pt"
@@ -192,7 +185,7 @@ def train_contrastive_encoder(
                         "epoch": epoch,
                         "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
-                        "loss": avg_val_loss,
+                        "loss": val_loss,
                     }, checkpoint_path)
                     logger.info(f"Saved best model to {checkpoint_path}")
                 else:
@@ -210,7 +203,7 @@ def train_contrastive_encoder(
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
-                "loss": avg_train_loss,
+                "loss": train_loss,
             }, checkpoint_path)
 
     return history

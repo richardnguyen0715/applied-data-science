@@ -72,6 +72,6 @@ def get_creditcard_transform() -> transforms.Compose:
     return transforms.Compose([
         ToTensor(),
         FeatureDropout(0.1),
-        AddGaussianNoise(0., 0.01)
+        AddGaussianNoise(0.0, 0.01)
     ])
 
