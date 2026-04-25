@@ -48,46 +48,81 @@ class DatasetAnalyzer:
         self.logger.info(f"Analyzer initialized: data_dir={data_dir}, results_dir={results_dir}")
 
     def analyze_cifar10(self) -> Dict:
-        """Analyze and visualize CIFAR10 dataset."""
+        """Analyze and visualize CIFAR10 dataset from Kaggle (imbalanced-cifar-10)."""
         self.logger.info("Starting CIFAR10 analysis...")
 
         try:
-            import torchvision.transforms as transforms
-            from torchvision.datasets import CIFAR10
             import torch
+            import kagglehub
+            from PIL import Image
 
-            transform = transforms.ToTensor()
-            train_set = CIFAR10(root=str(self.data_dir), train=True, download=False, transform=transform)
-            test_set = CIFAR10(root=str(self.data_dir), train=False, download=False, transform=transform)
+            self.logger.info("Downloading imbalanced-cifar-10 dataset from Kaggle...")
+            dataset_path = kagglehub.dataset_download("akhiltheerthala/imbalanced-cifar-10")
+            self.logger.info(f"Dataset downloaded to: {dataset_path}")
+
+            # The dataset structure has: train, valid, test folders
+            train_path = Path(dataset_path) / "train"
+            valid_path = Path(dataset_path) / "valid"
+            test_path = Path(dataset_path) / "test"
+
+            # Check which folders exist and use them
+            if not train_path.exists():
+                train_path = valid_path  # Use valid as train if train doesn't exist
+
+            # Load class labels from subdirectories
+            train_classes = sorted([d.name for d in train_path.iterdir() if d.is_dir()])
+            test_classes = sorted([d.name for d in test_path.iterdir() if d.is_dir()]) if test_path.exists() else train_classes
+
+            # Collect all image paths
+            train_images = []
+            train_labels = []
+            for class_idx, class_name in enumerate(train_classes):
+                class_dir = train_path / class_name
+                for img_file in class_dir.glob("*.png"):
+                    train_images.append(img_file)
+                    train_labels.append(class_idx)
+
+            test_images = []
+            test_labels = []
+            if test_path.exists() and test_path.is_dir():
+                for class_idx, class_name in enumerate(test_classes):
+                    class_dir = test_path / class_name
+                    for img_file in class_dir.glob("*.png"):
+                        test_images.append(img_file)
+                        test_labels.append(class_idx)
 
             # Collect statistics
             stats = {
-                'dataset': 'CIFAR10',
-                'train_samples': len(train_set),
-                'test_samples': len(test_set),
-                'total_samples': len(train_set) + len(test_set),
+                'dataset': 'CIFAR10 (Imbalanced - Kaggle)',
+                'train_samples': len(train_images),
+                'test_samples': len(test_images),
+                'total_samples': len(train_images) + len(test_images),
                 'image_shape': (3, 32, 32),
-                'num_classes': len(self.CIFAR10_CLASSES),
-                'classes': self.CIFAR10_CLASSES,
+                'num_classes': len(train_classes),
+                'classes': train_classes,
             }
 
             # Class distribution
-            train_labels = torch.tensor([train_set[i][1] for i in range(len(train_set))])
-            test_labels = torch.tensor([test_set[i][1] for i in range(len(test_set))])
+            train_labels_tensor = torch.tensor(train_labels, dtype=torch.long)
+            test_labels_tensor = torch.tensor(test_labels, dtype=torch.long) if test_labels else None
 
-            class_counts_train = torch.bincount(train_labels)
-            class_counts_test = torch.bincount(test_labels)
+            class_counts_train = torch.bincount(train_labels_tensor)
+            class_counts_test = torch.bincount(test_labels_tensor) if test_labels_tensor is not None else class_counts_train
 
             stats['class_distribution_train'] = class_counts_train.tolist()
-            stats['class_distribution_test'] = class_counts_test.tolist()
+            stats['class_distribution_test'] = class_counts_test.tolist() if test_labels else stats['class_distribution_train']
 
-            # Channel statistics (sample 1000 images for speed)
-            sample_indices = np.random.choice(len(train_set), min(1000, len(train_set)), replace=False)
+            # Channel statistics (sample images for speed)
+            sample_size = min(500, len(train_images))
+            sample_indices = np.random.choice(len(train_images), sample_size, replace=False)
             channels_mean = []
             channels_std = []
 
             for idx in sample_indices:
-                img_tensor = train_set[idx][0]
+                img = Image.open(train_images[idx]).convert('RGB')
+                img_array = np.array(img, dtype=np.float32) / 255.0
+                # Convert to tensor format (C, H, W)
+                img_tensor = torch.from_numpy(img_array).permute(2, 0, 1)
                 channels_mean.append(img_tensor.mean(dim=(1, 2)).numpy())
                 channels_std.append(img_tensor.std(dim=(1, 2)).numpy())
 
@@ -101,8 +136,8 @@ class DatasetAnalyzer:
             self.logger.info(f"CIFAR10 stats collected: {stats['train_samples']} train, {stats['test_samples']} test")
 
             # Visualizations
-            self._plot_cifar10_class_distribution(class_counts_train, class_counts_test)
-            self._plot_cifar10_samples(train_set)
+            self._plot_cifar10_class_distribution(class_counts_train, class_counts_test, train_classes)
+            self._plot_cifar10_samples_from_kaggle(train_images, train_labels)
             self._plot_cifar10_channel_stats(channels_mean, channels_std)
 
             # Save statistics
@@ -119,7 +154,7 @@ class DatasetAnalyzer:
         self.logger.info("Starting Credit Card Fraud analysis...")
 
         try:
-            fraud_path = self.data_dir / "creditcardfraud" / "creditcard.csv"
+            fraud_path = self.data_dir / "credit_card_fraud" / "creditcard.csv"
 
             if not fraud_path.exists():
                 self.logger.warning(f"Fraud dataset not found at {fraud_path}")
@@ -178,11 +213,14 @@ class DatasetAnalyzer:
             self.logger.error(f"Error analyzing Fraud dataset: {e}")
             return {'error': str(e)}
 
-    def _plot_cifar10_class_distribution(self, train_counts, test_counts):
+    def _plot_cifar10_class_distribution(self, train_counts, test_counts, class_names=None):
         """Plot CIFAR10 class distribution."""
+        if class_names is None:
+            class_names = self.CIFAR10_CLASSES
+
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
-        x = np.arange(len(self.CIFAR10_CLASSES))
+        x = np.arange(len(class_names))
         width = 0.35
 
         axes[0].bar(x, train_counts, width, color='steelblue', alpha=0.8)
@@ -190,7 +228,7 @@ class DatasetAnalyzer:
         axes[0].set_ylabel('Number of Samples', fontsize=11, fontweight='bold')
         axes[0].set_title('CIFAR10 Training Set - Class Distribution', fontsize=12, fontweight='bold')
         axes[0].set_xticks(x)
-        axes[0].set_xticklabels(self.CIFAR10_CLASSES, rotation=45, ha='right')
+        axes[0].set_xticklabels(class_names, rotation=45, ha='right')
         axes[0].grid(axis='y', alpha=0.3)
 
         axes[1].bar(x, test_counts, width, color='coral', alpha=0.8)
@@ -198,7 +236,7 @@ class DatasetAnalyzer:
         axes[1].set_ylabel('Number of Samples', fontsize=11, fontweight='bold')
         axes[1].set_title('CIFAR10 Test Set - Class Distribution', fontsize=12, fontweight='bold')
         axes[1].set_xticks(x)
-        axes[1].set_xticklabels(self.CIFAR10_CLASSES, rotation=45, ha='right')
+        axes[1].set_xticklabels(class_names, rotation=45, ha='right')
         axes[1].grid(axis='y', alpha=0.3)
 
         plt.tight_layout()
@@ -222,6 +260,30 @@ class DatasetAnalyzer:
             axes[ax_idx].axis('off')
 
         plt.suptitle('CIFAR10 - Sample Images', fontsize=14, fontweight='bold', y=0.98)
+        plt.tight_layout()
+        plt.savefig(self.viz_dir / 'cifar10_sample_images.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        self.logger.info("Saved: cifar10_sample_images.png")
+
+    def _plot_cifar10_samples_from_kaggle(self, image_paths, labels, num_samples: int = 12):
+        """Plot sample CIFAR10 images from Kaggle dataset."""
+        from PIL import Image
+
+        fig, axes = plt.subplots(3, 4, figsize=(14, 10))
+        axes = axes.ravel()
+
+        indices = np.random.choice(len(image_paths), min(num_samples, len(image_paths)), replace=False)
+
+        for ax_idx, img_idx in enumerate(indices):
+            img = Image.open(image_paths[img_idx]).convert('RGB')
+            img_np = np.array(img)
+
+            axes[ax_idx].imshow(img_np)
+            class_names = self.CIFAR10_CLASSES if len(self.CIFAR10_CLASSES) == len(set(labels)) else [str(i) for i in range(max(labels) + 1)]
+            axes[ax_idx].set_title(class_names[labels[img_idx]], fontsize=10, fontweight='bold')
+            axes[ax_idx].axis('off')
+
+        plt.suptitle('CIFAR10 (Kaggle Imbalanced) - Sample Images', fontsize=14, fontweight='bold', y=0.98)
         plt.tight_layout()
         plt.savefig(self.viz_dir / 'cifar10_sample_images.png', dpi=300, bbox_inches='tight')
         plt.close()
