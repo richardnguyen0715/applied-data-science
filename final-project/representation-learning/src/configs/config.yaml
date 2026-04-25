@@ -1,0 +1,39 @@
+seed: 42
+
+dataset:
+  root: data
+  download: false
+  num_classes: 10
+  image_size: 32
+  mean: [0.4914, 0.4822, 0.4465]
+  std: [0.2023, 0.1994, 0.2010]
+  augmentation:
+    random_crop: true
+    random_horizontal_flip: true
+
+training:
+  batch_size: 128
+  epochs: 60
+  lr: 0.1
+  weight_decay: 0.0005
+  momentum: 0.9
+  optimizer: sgd
+  scheduler: cosine
+  scheduler_t_max: 60
+  amp: true
+  num_workers: 4
+  pin_memory: true
+  log_interval: 50
+  max_synth_per_batch: 32
+  checkpoint_dir: results/cifar10/checkpoints
+  log_dir: results/cifar10/logs
+
+m2m:
+  steps: 3
+  lr: 0.003
+  lambda: 0.05
+
+imbalance:
+  imbalance_factor: 0.01
+
+warmup_epochs: 5
