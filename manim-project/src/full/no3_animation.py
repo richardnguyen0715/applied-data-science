@@ -783,9 +783,9 @@ class Scene05HNO3(Scene):
                 dots_a.append(Dot(np.array([left_x, y, 0.0]), radius=0.13, color=C_A))
                 dots_b.append(Dot(np.array([right_x, y, 0.0]), radius=0.13, color=C_B))
 
-            label_a = Text("Domain A", font_size=20, color=C_A)
+            label_a = Text("Domain A", font_size=20, color=C_A, font="Sans")
             label_a.move_to(np.array([left_x, 1.9, 0.0]))
-            label_b = Text("Domain B", font_size=20, color=C_B)
+            label_b = Text("Domain B", font_size=20, color=C_B, font="Sans")
             label_b.move_to(np.array([right_x, 1.9, 0.0]))
 
             self.play(
@@ -945,11 +945,13 @@ class Scene07SNO3(Scene):
             logger.info("Scene07SNO3.construct: start")
             set_background(self)
 
-            title = make_title("SNO3: Soft Matching", "Distribution Alignment")
-            self.play(FadeIn(title), run_time=TF)
+            title = make_title("SNO3: Soft Matching")
+            subtitle = Text("Distribution Alignment", font_size=24, color=C_ACC, font="Sans")
+            subtitle.next_to(title[0], DOWN, buff=0.15)
+            title_group = VGroup(title, subtitle)
+            self.play(FadeIn(title_group), run_time=TF)
 
             # --- User columns ---
-            n_users: int = 5
             left_x: float = -2.8
             right_x: float = 2.8
             y_positions: List[float] = [1.2, 0.4, -0.4, -1.2]
@@ -975,38 +977,146 @@ class Scene07SNO3(Scene):
             )
             self.wait(TS)
 
-            # --- Draw all soft (semi-transparent) connections ---
-            soft_lines: List[Line] = []
-            for da in dots_a:
-                for db in dots_b:
-                    # Opacity encodes probability / soft weight
-                    opacity: float = float(
-                        np.random.default_rng(
-                            abs(int(da.get_y() * 100)) + abs(int(db.get_y() * 100))
-                        ).uniform(0.5, 1)
+            # --- Phase A: hard 1-to-1 matching recap ---
+            wrong_perm: List[int] = [2, 0, 3, 1]
+            hard_lines: List[Line] = []
+            for i, j in enumerate(wrong_perm):
+                hard_lines.append(
+                    Line(
+                        dots_a[i].get_center(),
+                        dots_b[j].get_center(),
+                        color=C_FLOW,
+                        stroke_width=3.0,
+                        stroke_opacity=0.95,
                     )
-                    line = Line(
-                        da.get_center(),
-                        db.get_center(),
-                        color=C_SOFT,
-                        stroke_width=1.2,
-                        stroke_opacity=opacity,
-                    )
-                    soft_lines.append(line)
+                )
+
+            hard_note = Text("Hard constraint: 1 user <-> 1 user", font_size=20, color=C_FLOW, font="Sans")
+            hard_note.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
+                LaggedStart(*[Create(l) for l in hard_lines], lag_ratio=0.12),
+                FadeIn(hard_note),
+                run_time=TM,
+            )
+            self.play(
+                dots_a[1].animate.shift(UP * 0.08),
+                dots_a[1].animate.shift(DOWN * 0.08),
+                dots_b[2].animate.shift(DOWN * 0.08),
+                dots_b[2].animate.shift(UP * 0.08),
+                run_time=TF,
+            )
+            self.wait(TS)
+
+            # --- Phase B/C: transition to soft bipartite matching with probabilities ---
+            rng = np.random.default_rng(77)
+            weights: np.ndarray = rng.uniform(0.1, 1.0, (len(dots_a), len(dots_b)))
+            weights = weights / weights.sum(axis=1, keepdims=True)
+
+            soft_lines: List[Line] = []
+            for i, da in enumerate(dots_a):
+                for j, db in enumerate(dots_b):
+                    w_ij: float = float(weights[i, j])
+                    soft_lines.append(
+                        Line(
+                            da.get_center(),
+                            db.get_center(),
+                            color=C_SOFT,
+                            stroke_width=1.0 + 2.0 * w_ij,
+                            stroke_opacity=0.25 + 0.75 * w_ij,
+                        )
+                    )
+
+            prob_note = Text("Soft matching: each user connects to many users", font_size=20, color=C_MATCH, font="Sans")
+            prob_note.move_to(np.array([0.0, -2.0, 0.0]))
+
+            self.play(
+                FadeOut(VGroup(*hard_lines), run_time=TF),
+                FadeOut(hard_note, run_time=TF),
                 LaggedStart(*[Create(l) for l in soft_lines], lag_ratio=0.02),
+                FadeIn(prob_note),
                 run_time=TM,
             )
             self.wait(TM2)
 
-            # --- Caption explaining opacity = probability ---
-            opacity_note = Text("Opacity = connection probability", font_size=20, color=C_SOFT)
-            opacity_note.move_to(np.array([0.0, -2, 0.0]))
-            self.play(Write(opacity_note), run_time=TW)
+            outgoing_labels: List[MathTex] = []
+            for j in range(len(dots_b)):
+                lab = MathTex(f"{weights[0, j]:.2f}", font_size=24, color=C_MATCH)
+                lab.move_to((dots_a[0].get_center() + dots_b[j].get_center()) / 2 + UP * 0.15)
+                outgoing_labels.append(lab)
+
+            row_sum = MathTex(r"\sum_j w_{1j} = 1", font_size=34, color=C_MATCH)
+            row_sum.move_to(np.array([0.0, -1.95, 0.0]))
+
+            self.play(
+                Write(VGroup(*outgoing_labels)),
+                Transform(prob_note, row_sum),
+                run_time=TM,
+            )
             self.wait(TM2)
 
-            label = "Soft matching: Convert no-overlap to overlap via distribution alignment"
+            # --- Phase D: mass transport bridge ---
+            flow_arrows: List[Arrow] = []
+            for i in range(2):
+                for j in range(len(dots_b)):
+                    w_ij: float = float(weights[i, j])
+                    flow_arrows.append(
+                        Arrow(
+                            start=dots_a[i].get_center(),
+                            end=dots_b[j].get_center(),
+                            color=C_LOSS,
+                            stroke_width=1.2 + 3.0 * w_ij,
+                            stroke_opacity=0.15 + 0.80 * w_ij,
+                            buff=0.13,
+                            max_tip_length_to_length_ratio=0.12,
+                        )
+                    )
+
+            flow_note = Text("Preference mass is transported across domains", font_size=20, color=C_LOSS, font="Sans")
+            flow_note.move_to(np.array([0.0, -2.0, 0.0]))
+
+            self.play(
+                FadeOut(VGroup(*outgoing_labels), run_time=TF),
+                Transform(prob_note, flow_note),
+                LaggedStart(*[Create(a) for a in flow_arrows], lag_ratio=0.05),
+                run_time=TM,
+            )
+            self.wait(TS)
+
+            # --- Phase E: optimization view ---
+            rec_loss = MathTex(r"\mathcal{L}_{rec}", font_size=38, color=C_A)
+            rec_loss.move_to(np.array([-1.8, 2.2, 0.0]))
+            sink_loss = MathTex(r"\mathcal{L}_{S}", font_size=38, color=C_B)
+            sink_loss.move_to(np.array([1.8, 2.2, 0.0]))
+            total_loss = MathTex(
+                r"\mathcal{L} = \mathcal{L}_{rec} + \lambda\mathcal{L}_{S}",
+                font_size=40,
+                color=C_MATCH,
+            )
+            total_loss.move_to(np.array([0.0, 1.35, 0.0]))
+
+            self.play(
+                Write(rec_loss),
+                Write(sink_loss),
+                run_time=TW,
+            )
+            self.play(
+                Write(total_loss),
+                run_time=TM,
+            )
+            self.wait(TM2)
+
+            self.play(
+                FadeOut(VGroup(*soft_lines), run_time=TF),
+                FadeOut(VGroup(*flow_arrows), run_time=TF),
+                FadeOut(prob_note, run_time=TF),
+                run_time=TF,
+            )
+
+            label = (
+                "Hard matching is discrete and brittle. "
+                "Soft matching is continuous, differentiable, and aligns distributions."
+            )
             insight = make_insight_box(label)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
@@ -1951,10 +2061,13 @@ class Scene16KLvsSinkhorn(Scene):
             logger.info("Scene16KLvsSinkhorn.construct: start")
             set_background(self)
 
-            title = make_title("KL Divergence vs Sinkhorn Distance", "Handling non-overlapping distributions")
-            self.play(FadeIn(title), run_time=TF)
+            title = make_title("KL Divergence vs Sinkhorn Distance")
+            subtitle = Text("Handling non-overlapping distributions", font_size=24, color=C_ACC, font="Sans")
+            subtitle.next_to(title[0], DOWN, buff=0.15)
+            title_group = VGroup(title, subtitle)
+            self.play(FadeIn(title_group), run_time=TF)
 
-            # --- Left panel: KL divergence ---
+            # --- Shared setup: two side-by-side panels ---
             axes_l = Axes(
                 x_range=[-6.0, 6.0, 2.0],
                 y_range=[0.0, 0.59, 0.1],
@@ -1968,24 +2081,9 @@ class Scene16KLvsSinkhorn(Scene):
 
             axes_l.shift(LEFT * 3.3 + DOWN * 0.5)
 
-            kl_header = Text("KL Divergence (Failed)", font_size=22, color=C_FLOW, weight="BOLD")
+            kl_header = Text("KL Divergence (Failed)", font_size=22, color=C_FLOW, weight="BOLD", font="Sans")
             kl_header.next_to(axes_l, UP, buff=0.5)
 
-            # Two Gaussians with NO overlap
-            source_kl = axes_l.plot(
-                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x + 3.5) / 0.8) ** 2),
-                x_range=[-6.0, 0.0],
-                color=C_A, stroke_width=2.5,
-            )
-            target_kl = axes_l.plot(
-                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 3.5) / 0.8) ** 2),
-                x_range=[0.0, 6.0],
-                color=C_B, stroke_width=2.5,
-            )
-            kl_infinity = MathTex(r"KL(P\|Q) = \infty", font_size=36, color=C_FLOW)
-            kl_infinity.next_to(axes_l, DOWN, buff=0.2)
-
-            # --- Right panel: Sinkhorn distance ---
             axes_r = Axes(
                 x_range=[-6.0, 6.0, 2.0],
                 y_range=[0.0, 0.59, 0.1],
@@ -1999,33 +2097,8 @@ class Scene16KLvsSinkhorn(Scene):
 
             axes_r.shift(RIGHT * 3.3 + DOWN * 0.5)
 
-            sink_header = Text("Sinkhorn Distance (Works)", font_size=22, color=C_B, weight="BOLD")
+            sink_header = Text("Sinkhorn Distance (Works)", font_size=22, color=C_B, weight="BOLD", font="Sans")
             sink_header.next_to(axes_r, UP, buff=0.55)
-
-            source_sink = axes_r.plot(
-                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x + 3.5) / 0.8) ** 2),
-                x_range=[-6.0, 0.0],
-                color=C_A, stroke_width=2.5,
-            )
-            target_sink = axes_r.plot(
-                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 3.5) / 0.8) ** 2),
-                x_range=[0.0, 6.0],
-                color=C_B, stroke_width=2.5,
-            )
-
-            # Transport arrows from source to target (Sinkhorn shows flow)
-            transport_arrows: List[Arrow] = [
-                Arrow(
-                    start=axes_r.c2p(-3.5, 0.0),
-                    end=axes_r.c2p(3.5, 0.0),
-                    color=C_LOSS,
-                    stroke_width=2.5,
-                    buff=0,
-                    tip_length=0.25
-                )
-            ]
-            sink_value = MathTex(r"W(P, Q) \neq \infty", font_size=36, color=C_B)
-            sink_value.next_to(axes_r, DOWN, buff=0.2)
 
             divider = DashedLine(
                 start=np.array([0.0, 2.0, 0.0]),
@@ -2039,54 +2112,211 @@ class Scene16KLvsSinkhorn(Scene):
                 FadeIn(divider),
                 run_time=TM,
             )
+
+            # --- Phase A1: KL overlap baseline ---
+            source_kl = axes_l.plot(
+                lambda x: (1.0 / (1.1 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x + 1.0) / 1.1) ** 2),
+                x_range=[-6.0, 6.0],
+                color=C_A, stroke_width=2.5,
+            )
+            target_kl = axes_l.plot(
+                lambda x: (1.0 / (1.1 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 1.0) / 1.1) ** 2),
+                x_range=[-6.0, 6.0],
+                color=C_B, stroke_width=2.5,
+            )
+
+            source_sink = axes_r.plot(
+                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x + 3.5) / 0.8) ** 2),
+                x_range=[-6.0, 0.0],
+                color=C_A, stroke_width=2.5,
+            )
+            target_sink = axes_r.plot(
+                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 3.5) / 0.8) ** 2),
+                x_range=[0.0, 6.0],
+                color=C_B, stroke_width=2.5,
+            )
+
             self.play(
                 Create(source_kl), Create(target_kl),
                 Create(source_sink), Create(target_sink),
                 run_time=TM,
             )
+            overlap_note = Text("Overlap: KL is well-defined", font_size=18, color=C_MATCH, font="Sans")
+            overlap_note.next_to(axes_l, DOWN, buff=0.15)
+            self.play(FadeIn(overlap_note), run_time=TF)
             self.wait(TS)
 
-            # Highlight KL and Sinkhorn 
+            # --- Phase A2/A3: KL non-overlap and instability ---
+            source_kl_no = axes_l.plot(
+                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x + 3.5) / 0.8) ** 2),
+                x_range=[-6.0, 0.0],
+                color=C_A,
+                stroke_width=2.5,
+            )
+            target_kl_no = axes_l.plot(
+                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 3.5) / 0.8) ** 2),
+                x_range=[0.0, 6.0],
+                color=C_B,
+                stroke_width=2.5,
+            )
+
             self.play(
+                Transform(source_kl, source_kl_no),
+                Transform(target_kl, target_kl_no),
+                FadeOut(overlap_note),
+                run_time=TM,
+            )
+
+            zero_region = Rectangle(
+                width=2.1,
+                height=1.3,
+                color=C_FLOW,
+                stroke_width=2.0,
+                fill_opacity=0.18,
+            )
+            zero_region.move_to(axes_l.c2p(-3.4, 0.25))
+            log_zero = MathTex(r"\log(0) \Rightarrow \infty", font_size=34, color=C_FLOW)
+            log_zero.next_to(axes_l, DOWN, buff=0.15)
+
+            kl_counter = Integer(0, font_size=30, color=C_FLOW)
+            kl_counter.next_to(log_zero, DOWN, buff=0.12)
+            counter_label = Text("KL value", font_size=17, color=C_FLOW, font="Sans")
+            counter_label.next_to(kl_counter, LEFT, buff=0.12)
+
+            self.play(
+                FadeIn(zero_region),
+                Write(log_zero),
+                FadeIn(counter_label),
+                FadeIn(kl_counter),
+                run_time=TM,
+            )
+            self.play(ChangingDecimal(kl_counter, lambda t: t * 100000), run_time=TM)
+
+            kl_infinity = MathTex(r"KL(P\|Q) = \infty", font_size=36, color=C_FLOW)
+            kl_infinity.next_to(axes_l, DOWN, buff=0.2)
+            self.play(
+                FadeOut(VGroup(log_zero, kl_counter, counter_label), run_time=TF),
                 Write(kl_infinity),
-                LaggedStart(*[Create(a) for a in transport_arrows], lag_ratio=0.2),
+                run_time=TF,
+            )
+
+            kl_insight = VGroup(
+                Text("Density matching", font_size=18, color=C_FLOW, font="Sans"),
+                Text("Needs support overlap", font_size=18, color=C_FLOW, font="Sans"),
+                Text("Diverges on zero-density regions", font_size=18, color=C_FLOW, font="Sans"),
+            ).arrange(DOWN, aligned_edge=LEFT, buff=0.16)
+            kl_insight.move_to(np.array([-3.3, -0.1, 0.0]))
+
+            self.play(FadeIn(kl_insight, shift=LEFT * 0.2), run_time=TM)
+            self.wait(TM2)
+
+            # --- Phase B: Sinkhorn transport mechanism on same non-overlap setup ---
+            transport_arrows: List[Arrow] = []
+            for sx in [-4.0, -3.3, -2.6]:
+                for tx in [2.8, 3.5, 4.2]:
+                    dist = abs(tx - sx)
+                    transport_arrows.append(
+                        Arrow(
+                            start=axes_r.c2p(sx, 0.02),
+                            end=axes_r.c2p(tx, 0.02),
+                            color=C_LOSS,
+                            stroke_width=max(1.2, 4.6 - 0.45 * dist),
+                            stroke_opacity=max(0.30, 1.0 - 0.06 * dist),
+                            buff=0.0,
+                            tip_length=0.18,
+                        )
+                    )
+
+            smooth_arrows: List[Arrow] = []
+            for arr in transport_arrows:
+                smooth_arrows.append(
+                    Arrow(
+                        start=arr.get_start(),
+                        end=arr.get_end(),
+                        color=C_MATCH,
+                        stroke_width=arr.get_stroke_width() + 1.2,
+                        stroke_opacity=0.12,
+                        buff=0.0,
+                        tip_length=0.16,
+                    )
+                )
+
+            sink_value = MathTex(r"W_\varepsilon(P, Q) < \infty", font_size=36, color=C_B)
+            sink_value.next_to(axes_r, DOWN, buff=0.2)
+            sink_entropy = Text("Entropic smoothing -> stable gradients", font_size=18, color=C_MATCH, font="Sans")
+            sink_entropy.next_to(sink_value, DOWN, buff=0.1)
+
+            self.play(
+                LaggedStart(*[Create(a) for a in transport_arrows], lag_ratio=0.08),
                 Write(sink_value),
                 run_time=TM,
             )
-            self.wait(TM2)
+            self.play(
+                LaggedStart(*[FadeIn(a) for a in smooth_arrows], lag_ratio=0.04),
+                FadeIn(sink_entropy),
+                run_time=TM,
+            )
 
-            # --- Fade out plots to make space ---
+            sink_insight = VGroup(
+                Text("No overlap required", font_size=18, color=C_B, font="Sans"),
+                Text("Uses geometry + transport cost", font_size=18, color=C_B, font="Sans"),
+                Text("Smooth and differentiable", font_size=18, color=C_B, font="Sans"),
+            ).arrange(DOWN, aligned_edge=LEFT, buff=0.16)
+            sink_insight.move_to(np.array([3.3, -0.1, 0.0]))
+            self.play(FadeIn(sink_insight, shift=RIGHT * 0.2), run_time=TM)
+            self.wait(TS)
+
+            # --- Phase C: side-by-side comparison table ---
             self.play(
                 FadeOut(axes_l), FadeOut(source_kl), FadeOut(target_kl), FadeOut(kl_infinity),
                 FadeOut(axes_r), FadeOut(source_sink), FadeOut(target_sink), FadeOut(sink_value),
-                FadeOut(*transport_arrows),
+                FadeOut(divider),
+                FadeOut(zero_region),
+                FadeOut(VGroup(*transport_arrows)),
+                FadeOut(VGroup(*smooth_arrows)),
+                FadeOut(kl_header), FadeOut(sink_header),
+                FadeOut(kl_insight), FadeOut(sink_insight), FadeOut(sink_entropy),
                 run_time=TM
             )
 
-            # --- Left conclusions (KL) ---
-            kl_points = VGroup(
-                Text("Fails when no overlap", font_size=20, color=C_FLOW),
-                Text("Point-wise comparison", font_size=20, color=C_FLOW),
-            ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            table_title = Text("Deep Comparison", font_size=28, color=C_TEXT, weight="BOLD", font="Sans")
+            table_title.move_to(np.array([0.0, 2.0, 0.0]))
 
-            kl_points.move_to(np.array([-3.3, 0.0, 0.0]))
+            rows = [
+                ("Requirement", "Overlap needed", "No overlap needed"),
+                ("Signal", "Density", "Geometry + cost"),
+                ("Behavior", "Diverges", "Stable"),
+                ("Matching", "Pointwise", "Global transport"),
+                ("Optimization", "Unstable", "Differentiable"),
+            ]
 
-            # --- Right conclusions (Sinkhorn) ---
-            sink_points = VGroup(
-                Text("Works without overlap", font_size=20, color=C_B),
-                Text("Transport-based metric", font_size=20, color=C_B),
-            ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            table_items: List[VGroup] = []
+            y0 = 1.2
+            for idx, (aspect, kl_v, sink_v) in enumerate(rows):
+                y = y0 - idx * 0.55
+                aspect_t = Text(aspect, font_size=19, color=C_TEXT, font="Sans")
+                aspect_t.move_to(np.array([-2.6, y, 0.0]))
+                kl_t = Text(kl_v, font_size=19, color=C_FLOW, font="Sans")
+                kl_t.move_to(np.array([0.2, y, 0.0]))
+                sink_t = Text(sink_v, font_size=19, color=C_B, font="Sans")
+                sink_t.move_to(np.array([3.3, y, 0.0]))
+                table_items.append(VGroup(aspect_t, kl_t, sink_t))
 
-            sink_points.move_to(np.array([3.3, 0.0, 0.0]))
-
-            # --- Animate conclusions ---
             self.play(
-                FadeIn(kl_points, shift=LEFT),
-                FadeIn(sink_points, shift=RIGHT),
+                FadeIn(table_title),
+                LaggedStart(*[FadeIn(row) for row in table_items], lag_ratio=0.14),
                 run_time=TM
             )
 
+            final_insight = Tex(
+                r"KL = Compare probabilities \\\ Sinkhorn = Move probability mass",
+                font_size=44,
+                color=C_MATCH,
+            )
+            final_insight.move_to(np.array([0.0, -2.0, 0.0]))
+            self.play(Write(final_insight), run_time=TM)
             self.wait(TL)
+            logger.info("Scene16KLvsSinkhorn.construct: done")
 
         except Exception as exc:
             logger.error(f"Scene16 failed: {exc}")
