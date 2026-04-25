@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import random
+import warnings
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -68,7 +70,20 @@ class ImbalancedCIFAR10(Dataset[Tuple[Tensor, int]]):
             download: Whether torchvision should download dataset if missing.
             seed: Random seed for deterministic class subsampling.
         """
-        self.dataset = CIFAR10(root=root, train=train, transform=transform, download=download)
+        warning_category: type[Warning] = Warning
+        if hasattr(np, "VisibleDeprecationWarning"):
+            warning_category = np.VisibleDeprecationWarning
+        elif hasattr(np, "exceptions") and hasattr(np.exceptions, "VisibleDeprecationWarning"):
+            warning_category = np.exceptions.VisibleDeprecationWarning
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"dtype\(\): align should be passed as Python or NumPy boolean.*",
+                category=warning_category,
+                module=r"torchvision\.datasets\.cifar",
+            )
+            self.dataset = CIFAR10(root=root, train=train, transform=transform, download=download)
         targets = np.asarray(self.dataset.targets, dtype=np.int64)
 
         if train:
@@ -217,8 +232,10 @@ def _parse_data_config(config: Dict[str, Any]) -> CIFARDataConfig:
     imbalance_cfg = config["imbalance"]
     augmentation_cfg = dataset_cfg.get("augmentation", {})
 
+    resolved_root = _resolve_cifar_root(str(dataset_cfg["root"]))
+
     return CIFARDataConfig(
-        root=str(dataset_cfg["root"]),
+        root=resolved_root,
         download=bool(dataset_cfg.get("download", False)),
         num_classes=int(dataset_cfg.get("num_classes", 10)),
         batch_size=int(train_cfg["batch_size"]),
@@ -231,6 +248,48 @@ def _parse_data_config(config: Dict[str, Any]) -> CIFARDataConfig:
         random_crop=bool(augmentation_cfg.get("random_crop", True)),
         random_horizontal_flip=bool(augmentation_cfg.get("random_horizontal_flip", True)),
     )
+
+
+def _resolve_cifar_root(config_root: str) -> str:
+    """Resolve CIFAR-10 root for both direct and nested dataset layouts.
+
+    Supports either:
+    - <root>/cifar-10-batches-py
+    - <root>/cifar10/cifar-10-batches-py
+    """
+    raw_root = Path(config_root).expanduser()
+
+    if raw_root.is_absolute():
+        candidate_roots = [raw_root]
+    else:
+        project_root = Path(__file__).resolve().parents[2]
+        candidate_roots = [
+            (Path.cwd() / raw_root).resolve(),
+            (project_root / raw_root).resolve(),
+        ]
+
+    seen: set[str] = set()
+    unique_candidates: list[Path] = []
+    for candidate in candidate_roots:
+        candidate_key = str(candidate)
+        if candidate_key not in seen:
+            seen.add(candidate_key)
+            unique_candidates.append(candidate)
+
+    for root_path in unique_candidates:
+        if root_path.name == "cifar-10-batches-py" and root_path.exists():
+            return str(root_path.parent)
+
+        direct_layout = root_path / "cifar-10-batches-py"
+        nested_layout = root_path / "cifar10" / "cifar-10-batches-py"
+
+        if direct_layout.exists():
+            return str(root_path)
+
+        if nested_layout.exists():
+            return str(root_path / "cifar10")
+
+    return str(unique_candidates[0] if unique_candidates else raw_root)
 
 
 def _build_train_transform(parsed: CIFARDataConfig) -> transforms.Compose:

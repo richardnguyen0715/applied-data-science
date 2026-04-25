@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import sys
 from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn as nn
+from tqdm.auto import tqdm
 from torch import Tensor
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
@@ -61,6 +63,7 @@ class M2MTrainer:
         self.max_synth_per_batch = int(config["training"].get("max_synth_per_batch", 16))
         self.log_interval = int(config["training"].get("log_interval", 50))
         self.num_classes = int(config["dataset"].get("num_classes", 10))
+        self.show_progress = bool(config["training"].get("use_tqdm", True)) and sys.stderr.isatty()
 
         self.use_amp = bool(config["training"].get("amp", False)) and device.type == "cuda"
         if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
@@ -87,8 +90,19 @@ class M2MTrainer:
         total_correct = 0
         total_examples = 0
         total_synthesized = 0
+        total_steps = len(self.train_loader)
 
-        for step, (images, labels) in enumerate(self.train_loader):
+        progress_bar = tqdm(
+            self.train_loader,
+            total=total_steps,
+            desc=f"Train {epoch + 1}/{self.epochs}",
+            unit="batch",
+            leave=False,
+            dynamic_ncols=True,
+            disable=not self.show_progress,
+        )
+
+        for step, (images, labels) in enumerate(progress_bar, start=1):
             images = images.to(self.device, non_blocking=True)
             labels = labels.to(self.device, non_blocking=True)
 
@@ -126,12 +140,21 @@ class M2MTrainer:
             total_correct += int((predictions == augmented_labels).sum().item())
             total_synthesized += synthesized_count
 
-            if (step + 1) % self.log_interval == 0:
+            if self.show_progress and (step == total_steps or step % self.log_interval == 0):
+                running_loss = total_loss / max(total_examples, 1)
+                running_accuracy = total_correct / max(total_examples, 1)
+                progress_bar.set_postfix(
+                    loss=f"{running_loss:.4f}",
+                    acc=f"{running_accuracy:.4f}",
+                    synth=total_synthesized,
+                )
+
+            if step % self.log_interval == 0:
                 self.logger.info(
                     "Epoch %d Step %d/%d | loss=%.4f | synthesized=%d",
                     epoch + 1,
-                    step + 1,
-                    len(self.train_loader),
+                    step,
+                    total_steps,
                     float(loss.item()),
                     synthesized_count,
                 )
@@ -152,7 +175,11 @@ class M2MTrainer:
 
         for epoch in range(self.epochs):
             train_metrics = self.train_one_epoch(epoch)
-            val_metrics = self.evaluator.evaluate(self.model, self.val_loader)
+            val_metrics = self.evaluator.evaluate(
+                self.model,
+                self.val_loader,
+                progress_desc=f"Eval {epoch + 1}/{self.epochs}",
+            )
 
             if self.scheduler is not None:
                 self.scheduler.step()

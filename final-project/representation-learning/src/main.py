@@ -91,7 +91,12 @@ def run_training(config: Dict[str, Any]) -> Dict[str, Any]:
     optimizer = build_optimizer(model, config)
     scheduler = build_scheduler(optimizer, config)
 
-    evaluator = Evaluator(num_classes=num_classes, device=device)
+    show_progress = bool(config.get("training", {}).get("use_tqdm", True))
+    evaluator = Evaluator(
+        num_classes=num_classes,
+        device=device,
+        show_progress=show_progress,
+    )
     trainer = M2MTrainer(
         model=model,
         optimizer=optimizer,
@@ -105,7 +110,7 @@ def run_training(config: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     history: List[Dict[str, float]] = trainer.fit()
-    final_metrics = evaluator.evaluate(model, test_loader)
+    final_metrics = evaluator.evaluate(model, test_loader, progress_desc="Final eval")
 
     logger.info("Final accuracy: %.4f", final_metrics["accuracy"])
     logger.info("Final balanced accuracy: %.4f", final_metrics["balanced_accuracy"])
