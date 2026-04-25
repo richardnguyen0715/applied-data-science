@@ -10,3 +10,4 @@ jupyter>=1.0.0
 ipython>=8.10.0
 tqdm>=4.65.0
 imbalanced-learn>=0.10.1
+kagglehub>=0.1.0

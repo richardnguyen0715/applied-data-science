@@ -18,7 +18,8 @@ dependencies = [
     "jupyter (>=1.1.1,<2.0.0)",
     "ipython (>=9.13.0,<10.0.0)",
     "tqdm (>=4.67.3,<5.0.0)",
-    "imbalanced-learn (>=0.14.1,<0.15.0)"
+    "imbalanced-learn (>=0.14.1,<0.15.0)",
+    "kaggle (>=2.1.0,<3.0.0)"
 ]
 
 

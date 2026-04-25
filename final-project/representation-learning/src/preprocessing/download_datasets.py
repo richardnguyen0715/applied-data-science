@@ -104,7 +104,7 @@ class DatasetDownloader:
             return False
     
     def setup_fraud_dataset(self) -> bool:
-        """Setup credit card fraud dataset (requires manual download)"""
+        """Setup credit card fraud dataset (download from Kaggle)"""
         logger.info("=" * 60)
         logger.info("Credit Card Fraud Detection Dataset Setup")
         logger.info("=" * 60)
@@ -115,16 +115,46 @@ class DatasetDownloader:
             logger.info(f"✓ Dataset file found: {csv_path}")
             return self.verify_fraud_dataset()
         else:
-            logger.warning("✗ Dataset file not found")
-            logger.info("\nTo download the dataset:")
-            logger.info("1. Go to: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud")
-            logger.info("2. Download creditcard.csv")
-            logger.info(f"3. Place it in: {self.fraud_dir}")
-            logger.info("\nOr use Kaggle CLI:")
-            logger.info("  kaggle datasets download -d mlg-ulb/creditcardfraud")
-            logger.info(f"  unzip creditcardfraud.zip -d {self.fraud_dir}")
-            logger.info("  rm creditcardfraud.zip")
-            return False
+            logger.info("Dataset file not found. Attempting to download from Kaggle...")
+            
+            try:
+                import kagglehub
+                
+                logger.info("Downloading from Kaggle using kagglehub...")
+                # Download dataset
+                path = kagglehub.dataset_download("mlg-ulb/creditcardfraud")
+                logger.info(f"✓ Dataset downloaded to: {path}")
+                
+                # Copy CSV to our directory
+                import shutil
+                source_csv = Path(path) / 'creditcard.csv'
+                
+                if source_csv.exists():
+                    logger.info(f"Copying creditcard.csv to {self.fraud_dir}...")
+                    shutil.copy(source_csv, csv_path)
+                    logger.info(f"✓ File copied to: {csv_path}")
+                    return self.verify_fraud_dataset()
+                else:
+                    logger.error(f"✗ creditcard.csv not found in downloaded dataset: {path}")
+                    return False
+                    
+            except ImportError:
+                logger.warning("✗ kagglehub not installed")
+                logger.info("\nTo download the dataset:")
+                logger.info("1. Install kagglehub: pip install kagglehub")
+                logger.info("2. Setup Kaggle API credentials (see SETUP.md)")
+                logger.info("3. Run: bash scripts/download_fraud_dataset.sh")
+                logger.info("\nOr download manually:")
+                logger.info("1. Go to: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud")
+                logger.info("2. Download creditcard.csv")
+                logger.info(f"3. Place it in: {self.fraud_dir}")
+                return False
+            except Exception as e:
+                logger.error(f"✗ Failed to download dataset: {e}")
+                logger.info("\nAlternative: Download manually from:")
+                logger.info("https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud")
+                logger.info(f"Then place creditcard.csv in: {self.fraud_dir}")
+                return False
     
     def verify_fraud_dataset(self) -> bool:
         """Verify credit card fraud dataset integrity"""
