@@ -257,17 +257,39 @@ def _resolve_cifar_root(config_root: str) -> str:
     - <root>/cifar-10-batches-py
     - <root>/cifar10/cifar-10-batches-py
     """
-    root_path = Path(config_root).expanduser()
-    direct_layout = root_path / "cifar-10-batches-py"
-    nested_layout = root_path / "cifar10" / "cifar-10-batches-py"
+    raw_root = Path(config_root).expanduser()
 
-    if direct_layout.exists():
-        return str(root_path)
+    if raw_root.is_absolute():
+        candidate_roots = [raw_root]
+    else:
+        project_root = Path(__file__).resolve().parents[2]
+        candidate_roots = [
+            (Path.cwd() / raw_root).resolve(),
+            (project_root / raw_root).resolve(),
+        ]
 
-    if nested_layout.exists():
-        return str(root_path / "cifar10")
+    seen: set[str] = set()
+    unique_candidates: list[Path] = []
+    for candidate in candidate_roots:
+        candidate_key = str(candidate)
+        if candidate_key not in seen:
+            seen.add(candidate_key)
+            unique_candidates.append(candidate)
 
-    return str(root_path)
+    for root_path in unique_candidates:
+        if root_path.name == "cifar-10-batches-py" and root_path.exists():
+            return str(root_path.parent)
+
+        direct_layout = root_path / "cifar-10-batches-py"
+        nested_layout = root_path / "cifar10" / "cifar-10-batches-py"
+
+        if direct_layout.exists():
+            return str(root_path)
+
+        if nested_layout.exists():
+            return str(root_path / "cifar10")
+
+    return str(unique_candidates[0] if unique_candidates else raw_root)
 
 
 def _build_train_transform(parsed: CIFARDataConfig) -> transforms.Compose:

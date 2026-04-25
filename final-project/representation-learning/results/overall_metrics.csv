@@ -1,0 +1,6 @@
+metric,value
+Accuracy,0.7006
+Balanced Accuracy,0.7005999999999999
+Std Dev Per-Class Accuracy,0.16600614446459502
+Best Class Accuracy,0.96
+Worst Class Accuracy,0.479
