@@ -1,5 +1,8 @@
 """Data transformation and augmentation for contrastive learning."""
 
+from typing import Any
+import torch
+from torch import Tensor
 import torchvision.transforms as transforms
 
 
@@ -40,10 +43,35 @@ def get_creditcard_transform() -> transforms.Compose:
     """
     Get transformation for credit card fraud dataset (tabular data).
     
-    For tabular data, no transformation needed as data is already normalized tensors.
-    
     Returns:
-        Identity transformation (returns input unchanged).
+        A callable transform that applies feature dropout and Gaussian noise.
     """
-    return transforms.Compose([])
+    class ToTensor:
+        def __call__(self, x: Any) -> Tensor:
+            return torch.tensor(x, dtype=torch.float32)
+
+
+    class AddGaussianNoise:
+        def __init__(self, mean: float = 0.0, std: float = 0.01) -> None:
+            self.mean = mean
+            self.std = std
+
+        def __call__(self, x: Tensor) -> Tensor:
+            noise: Tensor = torch.randn_like(x) * self.std
+            return x + noise + self.mean
+
+
+    class FeatureDropout:
+        def __init__(self, drop_prob: float = 0.1) -> None:
+            self.drop_prob = drop_prob
+
+        def __call__(self, x: Tensor) -> Tensor:
+            mask: Tensor = (torch.rand_like(x) > self.drop_prob).float()
+            return x * mask
+    
+    return transforms.Compose([
+        ToTensor(),
+        FeatureDropout(0.1),
+        AddGaussianNoise(0., 0.01)
+    ])
 
