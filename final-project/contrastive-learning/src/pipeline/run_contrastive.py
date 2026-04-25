@@ -348,8 +348,8 @@ def run_contrastive_pipeline(
             # Duplicate labels
             labels = torch.cat([labels, labels], dim=0)
 
-            feature_list.append(features.cpu())
-            label_list.append(labels.cpu())
+            test_features.append(features.cpu())
+            test_labels.append(labels.cpu())
 
     test_features = torch.cat(test_features, dim=0)
     test_labels = torch.cat(test_labels, dim=0)

@@ -1249,7 +1249,7 @@ class Scene09FinalObjective(Scene):
             rec_loss = MathTex(r"\mathcal{L}_{\text{rec}}", color=C_A, font_size=36).scale(1.5)
             rec_loss.move_to(np.array([-3.4, 1.5, 0.0]))
 
-            rec_desc = MathTex(r"\text{Recommendation accuracy}", font_size=36, color=C_A)
+            rec_desc = MathTex(r"\text{Recommendation}", font_size=36, color=C_A)
             rec_desc.next_to(rec_loss, DOWN, buff=0.3)
 
             # --- Component 2: Sinkhorn loss ---
