@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Any, Dict, List
 
 import torch
 import torch.nn as nn
+from tqdm.auto import tqdm
 from torch import Tensor
 from torch.utils.data import DataLoader
 
@@ -19,24 +21,38 @@ from src.utils.metrics import (
 class Evaluator:
     """Evaluate classification model on standard and imbalance-aware metrics."""
 
-    def __init__(self, num_classes: int, device: torch.device, criterion: nn.Module | None = None) -> None:
+    def __init__(
+        self,
+        num_classes: int,
+        device: torch.device,
+        criterion: nn.Module | None = None,
+        show_progress: bool = True,
+    ) -> None:
         """Initialize evaluator.
 
         Args:
             num_classes: Number of output classes.
             device: Device used for forward passes.
             criterion: Optional criterion for reporting evaluation loss.
+            show_progress: Whether to render tqdm progress bars during evaluation.
         """
         self.num_classes = num_classes
         self.device = device
         self.criterion = criterion if criterion is not None else nn.CrossEntropyLoss()
+        self.show_progress = show_progress and sys.stderr.isatty()
 
-    def evaluate(self, model: nn.Module, dataloader: DataLoader[Any]) -> Dict[str, Any]:
+    def evaluate(
+        self,
+        model: nn.Module,
+        dataloader: DataLoader[Any],
+        progress_desc: str = "Evaluating",
+    ) -> Dict[str, Any]:
         """Run a full evaluation pass.
 
         Args:
             model: Model to evaluate.
             dataloader: Evaluation dataloader.
+            progress_desc: Description displayed in tqdm progress bar.
 
         Returns:
             Dictionary with loss, accuracy, balanced accuracy, confusion matrix,
@@ -50,9 +66,20 @@ class Evaluator:
         total_correct = 0
         all_targets: List[int] = []
         all_predictions: List[int] = []
+        total_steps = len(dataloader)
 
         with torch.no_grad():
-            for images, targets in dataloader:
+            progress_bar = tqdm(
+                dataloader,
+                total=total_steps,
+                desc=progress_desc,
+                unit="batch",
+                leave=False,
+                dynamic_ncols=True,
+                disable=not self.show_progress,
+            )
+
+            for step, (images, targets) in enumerate(progress_bar, start=1):
                 images = images.to(self.device, non_blocking=True)
                 targets = targets.to(self.device, non_blocking=True)
 
@@ -68,6 +95,14 @@ class Evaluator:
 
                 all_targets.extend(targets.detach().cpu().tolist())
                 all_predictions.extend(predictions.detach().cpu().tolist())
+
+                if self.show_progress and (step == total_steps or step % 10 == 0):
+                    running_loss = total_loss / max(total_examples, 1)
+                    running_accuracy = total_correct / max(total_examples, 1)
+                    progress_bar.set_postfix(
+                        loss=f"{running_loss:.4f}",
+                        acc=f"{running_accuracy:.4f}",
+                    )
 
         if was_training:
             model.train()
