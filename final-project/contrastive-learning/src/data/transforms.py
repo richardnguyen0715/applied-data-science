@@ -48,7 +48,10 @@ def get_creditcard_transform() -> transforms.Compose:
     """
     class ToTensor:
         def __call__(self, x: Any) -> Tensor:
-            return torch.tensor(x, dtype=torch.float32)
+            if isinstance(x, torch.Tensor):
+                return x.detach().clone().float()
+            else:
+                return torch.tensor(x, dtype=torch.float32)
 
 
     class AddGaussianNoise:

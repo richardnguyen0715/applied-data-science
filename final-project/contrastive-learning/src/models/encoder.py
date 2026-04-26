@@ -145,7 +145,7 @@ class MLPEncoder(BaseModel):
 
     def __init__(
         self,
-        input_dim: int = 31,
+        input_dim: int = 30,
         hidden_dim: int = 256,
         projection_dim: int = 128,
         num_layers: int = 3,

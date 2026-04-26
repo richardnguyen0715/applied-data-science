@@ -945,11 +945,8 @@ class Scene07SNO3(Scene):
             logger.info("Scene07SNO3.construct: start")
             set_background(self)
 
-            title = make_title("SNO3: Soft Matching")
-            subtitle = Text("Distribution Alignment", font_size=24, color=C_ACC, font="Sans")
-            subtitle.next_to(title[0], DOWN, buff=0.15)
-            title_group = VGroup(title, subtitle)
-            self.play(FadeIn(title_group), run_time=TF)
+            title = make_title("SNO3: Soft Matching", "Distribution Alignment")
+            self.play(FadeIn(title), run_time=TF)
 
             # --- User columns ---
             left_x: float = -2.8
@@ -977,7 +974,7 @@ class Scene07SNO3(Scene):
             )
             self.wait(TS)
 
-            # --- Phase A: hard 1-to-1 matching recap ---
+            # --- Phase A: Hard 1-to-1 matching recap ---
             wrong_perm: List[int] = [2, 0, 3, 1]
             hard_lines: List[Line] = []
             for i, j in enumerate(wrong_perm):
@@ -986,12 +983,12 @@ class Scene07SNO3(Scene):
                         dots_a[i].get_center(),
                         dots_b[j].get_center(),
                         color=C_FLOW,
-                        stroke_width=3.0,
+                        stroke_width=2.5,
                         stroke_opacity=0.95,
                     )
                 )
 
-            hard_note = Text("Hard constraint: 1 user <-> 1 user", font_size=20, color=C_FLOW, font="Sans")
+            hard_note = Text("Hard constraint: strictly 1-to-1 matching", font_size=20, color=C_FLOW)
             hard_note.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
@@ -999,17 +996,11 @@ class Scene07SNO3(Scene):
                 FadeIn(hard_note),
                 run_time=TM,
             )
-            self.play(
-                dots_a[1].animate.shift(UP * 0.08),
-                dots_a[1].animate.shift(DOWN * 0.08),
-                dots_b[2].animate.shift(DOWN * 0.08),
-                dots_b[2].animate.shift(UP * 0.08),
-                run_time=TF,
-            )
+
             self.wait(TS)
 
-            # --- Phase B/C: transition to soft bipartite matching with probabilities ---
-            rng = np.random.default_rng(77)
+            # --- Phase B/C: Transition to soft bipartite matching with probabilities ---
+            rng = np.random.default_rng(42)
             weights: np.ndarray = rng.uniform(0.1, 1.0, (len(dots_a), len(dots_b)))
             weights = weights / weights.sum(axis=1, keepdims=True)
 
@@ -1249,14 +1240,14 @@ class Scene09FinalObjective(Scene):
             rec_loss = MathTex(r"\mathcal{L}_{\text{rec}}", color=C_A, font_size=36).scale(1.5)
             rec_loss.move_to(np.array([-3.4, 1.5, 0.0]))
 
-            rec_desc = MathTex(r"\text{Recommendation}", font_size=36, color=C_A)
+            rec_desc = MathTex(r"\text{Recommendation loss}", font_size=36, color=C_A)
             rec_desc.next_to(rec_loss, DOWN, buff=0.3)
 
             # --- Component 2: Sinkhorn loss ---
             sink_loss = MathTex(r"\lambda \times \mathcal{L}_{\text{sink}}", color=C_B, font_size=36).scale(1.5)
             sink_loss.move_to(np.array([3.4, 1.5, 0.0]))
 
-            sink_desc = MathTex(r"\text{Distribution alignment (Sinkhorn)}", font_size=36, color=C_B)
+            sink_desc = MathTex(r"\text{Distribution alignment loss}", font_size=36, color=C_B)
             sink_desc.next_to(sink_loss, DOWN, buff=0.3)
 
             self.play(

@@ -173,7 +173,7 @@ class CreditCardFraudDataset(ContrastiveDataset):
             If transform is provided: ((x_i, x_j), label) for contrastive learning
             If transform is None: (x, label) for evaluation
         """
-        x = self.data[idx]  # (31,) features
+        x = self.data[idx]  # (30,) features
         label = self.labels[idx].item()
 
         if self.transform is not None:

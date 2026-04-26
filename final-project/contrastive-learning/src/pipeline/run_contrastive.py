@@ -170,7 +170,7 @@ def run_contrastive_pipeline(
         logger.info("Using ContrastiveEncoder (CNN) for image data")
     elif config.data.dataset_name == "credit-card-fraud":
         encoder = MLPEncoder(
-            input_dim=31,
+            input_dim=30,
             hidden_dim=config.encoder.hidden_dim,
             projection_dim=config.encoder.projection_dim,
             num_layers=config.encoder.num_layers,
