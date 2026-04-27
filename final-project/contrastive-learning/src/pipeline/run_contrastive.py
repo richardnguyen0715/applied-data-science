@@ -370,6 +370,15 @@ def run_contrastive_pipeline(
     for metric_name, metric_value in overall_metrics.items():
         logger.info(f"  {metric_name}: {metric_value:.4f}")
 
+    logger.info("\nPer-class metrics:")
+    for class_id, metrics in per_class_metrics.items():
+        logger.info(
+            f"\nClass {class_id}: "
+            f"- Precision = {metrics['precision']:.4f}, "
+            f"- Recall = {metrics['recall']:.4f}, "
+            f"- F1 = {metrics['f1']:.4f}"
+        )
+
     # Get confusion matrix
     confusion_mat = metrics_calculator.get_confusion_matrix()
 

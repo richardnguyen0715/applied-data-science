@@ -75,7 +75,7 @@ class ClassificationMetrics:
 
     def compute_per_class(self) -> Dict[int, Dict[str, float]]:
         """
-        Compute per-class metrics.
+        Compute per-class precision, recall, f1-score (no macro, just per-class).
 
         Returns:
             Dictionary of per-class metrics.
@@ -83,43 +83,17 @@ class ClassificationMetrics:
         predictions = np.array(self.predictions)
         ground_truth = np.array(self.ground_truth)
 
+        precision = precision_score(ground_truth, predictions, average=None, zero_division=0, labels=range(self.num_classes))
+        recall = recall_score(ground_truth, predictions, average=None, zero_division=0, labels=range(self.num_classes))
+        f1 = f1_score(ground_truth, predictions, average=None, zero_division=0, labels=range(self.num_classes))
+
         per_class_metrics = {}
-
         for class_id in range(self.num_classes):
-            class_mask = ground_truth == class_id
-            if class_mask.sum() == 0:
-                continue
-
-            class_predictions = predictions[class_mask]
-            class_ground_truth = ground_truth[class_mask]
-
-            accuracy = accuracy_score(class_ground_truth, class_predictions)
-            precision = precision_score(
-                class_ground_truth,
-                class_predictions,
-                average="binary" if self.num_classes == 2 else "weighted",
-                zero_division=0,
-            )
-            recall = recall_score(
-                class_ground_truth,
-                class_predictions,
-                average="binary" if self.num_classes == 2 else "weighted",
-                zero_division=0,
-            )
-            f1 = f1_score(
-                class_ground_truth,
-                class_predictions,
-                average="binary" if self.num_classes == 2 else "weighted",
-                zero_division=0,
-            )
-
             per_class_metrics[class_id] = {
-                "accuracy": accuracy,
-                "precision": precision,
-                "recall": recall,
-                "f1": f1,
+                "precision": precision[class_id],
+                "recall": recall[class_id],
+                "f1": f1[class_id],
             }
-
         return per_class_metrics
 
     def get_confusion_matrix(self) -> np.ndarray:
