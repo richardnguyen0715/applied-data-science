@@ -1,5 +1,4 @@
 # Configuration for CIFAR-10-LT experiment (Imbalance ratio: 100:1)
-# This is an alias for default.yaml
 
 data:
   dataset_name: "cifar10-lt"
@@ -21,7 +20,7 @@ encoder:
   use_bn: true
 
 contrastive_loss:
-  loss_type: "nt_xent"
+  loss_type: "supcon"
   temperature: 0.07
   use_cosine_similarity: true
 
@@ -52,6 +51,7 @@ evaluation:
   num_classes: 10
   compute_confusion_matrix: true
 
+val_ratio: 0.1  # Default 10% for validation set
 seed: 42
 output_dir: "outputs/cifar10-lt-r100"
 device: "cuda"

@@ -137,14 +137,38 @@ def run_contrastive_pipeline(
         save_path=figure_dir / "class_distribution.png",
     )
 
-    # Create data loaders
+    VAL_RATIO = config.val_ratio
+
+    # --- Split train_dataset_contrastive into train/val ---
+    total_len = len(train_dataset_contrastive)
+    val_len = int(total_len * VAL_RATIO)
+    train_len = total_len - val_len    
+
+    if val_len > 0:
+        train_subset, val_subset = torch.utils.data.random_split(
+            train_dataset_contrastive, [train_len, val_len], generator=torch.Generator().manual_seed(config.seed)
+        )
+    else:
+        train_subset = train_dataset_contrastive
+        val_subset = None
+
     logger.info("Creating data loaders...")
     train_loader, _, _ = create_data_loaders(
-        train_dataset_contrastive,
+        train_subset,
         batch_size=config.contrastive_training.batch_size,
         num_workers=config.data.num_workers,
         shuffle_train=True,
     )
+
+    if val_subset is not None:
+        val_loader, _, _ = create_data_loaders(
+            val_subset,
+            batch_size=config.contrastive_training.batch_size,
+            num_workers=config.data.num_workers,
+            shuffle_train=False,
+        )
+    else:
+        val_loader = None
 
     test_loader, _, _ = create_data_loaders(
         test_dataset,
@@ -189,7 +213,7 @@ def run_contrastive_pipeline(
     history_contrastive = train_contrastive_encoder(
         model=encoder,
         train_loader=train_loader,
-        val_loader=None,
+        val_loader=val_loader,
         num_epochs=config.contrastive_training.num_epochs,
         learning_rate=config.contrastive_training.learning_rate,
         weight_decay=config.contrastive_training.weight_decay,
@@ -280,14 +304,38 @@ def run_contrastive_pipeline(
         def __getitem__(self, idx):
             return self.features[idx], self.labels[idx]
 
+
     feature_dataset = FeatureDataset(all_features, all_labels)
 
+    # --- Split feature_dataset into train/val for classifier ---
+    total_feat_len = len(feature_dataset)
+    val_feat_len = int(total_feat_len * VAL_RATIO)
+    train_feat_len = total_feat_len - val_feat_len
+
+    if val_feat_len > 0:
+        feature_train_subset, feature_val_subset = torch.utils.data.random_split(
+            feature_dataset, [train_feat_len, val_feat_len], generator=torch.Generator().manual_seed(config.seed)
+        )
+    else:
+        feature_train_subset = feature_dataset
+        feature_val_subset = None
+
     feature_train_loader, _, _ = create_data_loaders(
-        feature_dataset,
+        feature_train_subset,
         batch_size=config.classifier_training.batch_size,
         num_workers=0,
         shuffle_train=True,
     )
+
+    if feature_val_subset is not None:
+        feature_val_loader, _, _ = create_data_loaders(
+            feature_val_subset,
+            batch_size=config.classifier_training.batch_size,
+            num_workers=0,
+            shuffle_train=False,
+        )
+    else:
+        feature_val_loader = None
 
     # Get class weights for imbalanced classification
     class_weights = torch.from_numpy(
@@ -300,7 +348,7 @@ def run_contrastive_pipeline(
     history_classifier = train_classifier(
         model=classifier,
         train_loader=feature_train_loader,
-        val_loader=None,
+        val_loader=feature_val_loader,
         num_epochs=config.classifier_training.num_epochs,
         learning_rate=config.classifier_training.learning_rate,
         weight_decay=config.classifier_training.weight_decay,

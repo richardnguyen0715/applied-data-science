@@ -45,7 +45,7 @@ class EncoderConfig:
 class ContrastiveLossConfig:
     """Configuration for contrastive loss."""
 
-    loss_type: str = "nt_xent"
+    loss_type: str = "supcon"
     temperature: float = 0.07
     use_cosine_similarity: bool = True
 
@@ -105,6 +105,7 @@ class Config:
     classifier_training: ClassifierTrainingConfig = field(default_factory=ClassifierTrainingConfig)
     classifier: ClassifierConfig = field(default_factory=ClassifierConfig)
     evaluation: EvaluationConfig = field(default_factory=EvaluationConfig)
+    val_ratio: float = 0.1
     seed: int = 42
     output_dir: str = "outputs"
     device: str = "cuda"
@@ -149,6 +150,7 @@ def load_config_from_yaml(config_path: str) -> Config:
         classifier_training=classifier_training_config,
         classifier=classifier_config,
         evaluation=evaluation_config,
+        val_ratio=config_dict.get('val_ratio', 0.1),
         seed=config_dict.get('seed', 42),
         output_dir=config_dict.get('output_dir', 'outputs'),
         device=config_dict.get('device', 'cuda'),

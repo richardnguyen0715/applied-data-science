@@ -1,5 +1,4 @@
 # Configuration for Credit Card Fraud Detection (Tabular Dataset)
-# Note: Tabular data, no augmentation applied
 
 data:
   dataset_name: "credit-card-fraud"
@@ -14,7 +13,7 @@ encoder:
   use_bn: true
 
 contrastive_loss:
-  loss_type: "nt_xent"
+  loss_type: "supcon"
   temperature: 0.07
   use_cosine_similarity: true
 
@@ -45,6 +44,7 @@ evaluation:
   num_classes: 2
   compute_confusion_matrix: true
 
+val_ratio: 0.1  # Default 10% for validation set
 seed: 42
 output_dir: "outputs/credit-card-fraud"
 device: "cuda"
