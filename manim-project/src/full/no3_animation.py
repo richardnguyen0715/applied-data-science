@@ -29,6 +29,7 @@ from typing import List, Tuple
 import numpy as np
 from loguru import logger
 from manim import (
+    Table,
     ChangingDecimal,
     Integer,
     ImageMobject,
@@ -992,12 +993,12 @@ class Scene07SNO3(Scene):
             hard_note.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
-                LaggedStart(*[Create(l) for l in hard_lines], lag_ratio=0.12),
+                LaggedStart(*[Create(l) for l in hard_lines], lag_ratio=0.02),
                 FadeIn(hard_note),
                 run_time=TM,
             )
 
-            self.wait(TS)
+            self.wait(TL)
 
             # --- Phase B/C: Transition to soft bipartite matching with probabilities ---
             rng = np.random.default_rng(42)
@@ -1013,19 +1014,34 @@ class Scene07SNO3(Scene):
                             da.get_center(),
                             db.get_center(),
                             color=C_SOFT,
-                            stroke_width=1.0 + 2.0 * w_ij,
-                            stroke_opacity=0.25 + 0.75 * w_ij,
+                            stroke_width=1.5 + 1.5 * w_ij,
+                            stroke_opacity=0.5 + 0.5 * w_ij,
                         )
                     )
 
-            prob_note = Text("Soft matching: each user connects to many users", font_size=20, color=C_MATCH, font="Sans")
+            prob_note = Text("Soft matching: each user connects to many users", font_size=20, color=C_MATCH)
             prob_note.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
-                FadeOut(VGroup(*hard_lines), run_time=TF),
-                FadeOut(hard_note, run_time=TF),
+                FadeOut(VGroup(*hard_lines), run_time=TM),
+                FadeOut(hard_note, run_time=TM),
+                run_time=TM,
+            )
+            self.wait(TM2)
+
+            self.play(
                 LaggedStart(*[Create(l) for l in soft_lines], lag_ratio=0.02),
                 FadeIn(prob_note),
+                run_time=TL,
+            )
+            self.wait(TM2)
+
+            lines_from_a0 = soft_lines[:len(dots_b)]
+            lines_not_from_a0 = soft_lines[len(dots_b):]
+
+            self.play(
+                *[FadeOut(l) for l in lines_not_from_a0], 
+                FadeOut(prob_note, run_time=TF),
                 run_time=TM,
             )
             self.wait(TM2)
@@ -1033,81 +1049,70 @@ class Scene07SNO3(Scene):
             outgoing_labels: List[MathTex] = []
             for j in range(len(dots_b)):
                 lab = MathTex(f"{weights[0, j]:.2f}", font_size=24, color=C_MATCH)
-                lab.move_to((dots_a[0].get_center() + dots_b[j].get_center()) / 2 + UP * 0.15)
+                lab.move_to((dots_a[0].get_center() + dots_b[j].get_center()) / 2 + UP * 0.2)
                 outgoing_labels.append(lab)
 
-            row_sum = MathTex(r"\sum_j w_{1j} = 1", font_size=34, color=C_MATCH)
-            row_sum.move_to(np.array([0.0, -1.95, 0.0]))
+            row_sum = MathTex(r"\sum_{j=1}^{n} w_{1j} = 1", font_size=38, color=C_MATCH)
+            row_sum.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
                 Write(VGroup(*outgoing_labels)),
-                Transform(prob_note, row_sum),
+                FadeIn(row_sum, shift=LEFT, run_time=TF),
                 run_time=TM,
             )
             self.wait(TM2)
 
-            # --- Phase D: mass transport bridge ---
-            flow_arrows: List[Arrow] = []
-            for i in range(2):
-                for j in range(len(dots_b)):
-                    w_ij: float = float(weights[i, j])
-                    flow_arrows.append(
-                        Arrow(
-                            start=dots_a[i].get_center(),
-                            end=dots_b[j].get_center(),
-                            color=C_LOSS,
-                            stroke_width=1.2 + 3.0 * w_ij,
-                            stroke_opacity=0.15 + 0.80 * w_ij,
-                            buff=0.13,
-                            max_tip_length_to_length_ratio=0.12,
-                        )
-                    )
-
-            flow_note = Text("Preference mass is transported across domains", font_size=20, color=C_LOSS, font="Sans")
+            # --- Phase D: Mass transport bridge ---
+            flow_note = Text("Preference mass is transported across domains", font_size=20, color=C_LOSS)
             flow_note.move_to(np.array([0.0, -2.0, 0.0]))
 
             self.play(
+                *[FadeOut(l) for l in lines_from_a0], 
                 FadeOut(VGroup(*outgoing_labels), run_time=TF),
-                Transform(prob_note, flow_note),
-                LaggedStart(*[Create(a) for a in flow_arrows], lag_ratio=0.05),
+                FadeOut(row_sum, run_time=TF),
+                run_time=TM
+            )
+            self.wait(TM2)
+
+            self.play(
+                LaggedStart(*[Create(l) for l in soft_lines], lag_ratio=0.1),
+                FadeIn(flow_note, run_time=TF),
                 run_time=TM,
             )
-            self.wait(TS)
+            self.wait(TM2)
 
-            # --- Phase E: optimization view ---
-            rec_loss = MathTex(r"\mathcal{L}_{rec}", font_size=38, color=C_A)
-            rec_loss.move_to(np.array([-1.8, 2.2, 0.0]))
-            sink_loss = MathTex(r"\mathcal{L}_{S}", font_size=38, color=C_B)
-            sink_loss.move_to(np.array([1.8, 2.2, 0.0]))
+            # --- Phase E: Optimization view ---
+            rec_loss = MathTex(r"\mathcal{L}_{rec}", font_size=42, color=C_A)
+            rec_loss.move_to(np.array([-2.8, -2.0, 0.0]))
+            sink_loss = MathTex(r"\mathcal{L}_{sink}", font_size=42, color=C_B)
+            sink_loss.move_to(np.array([2.8, -2.0, 0.0]))
             total_loss = MathTex(
-                r"\mathcal{L} = \mathcal{L}_{rec} + \lambda\mathcal{L}_{S}",
-                font_size=40,
+                r"\mathcal{L} = \mathcal{L}_{rec} + \lambda\mathcal{L}_{sink}",
+                font_size=42,
                 color=C_MATCH,
             )
-            total_loss.move_to(np.array([0.0, 1.35, 0.0]))
+            total_loss.move_to(np.array([0.0, -2.0, 0.0]))
+
+            self.play(
+                FadeOut(flow_note, run_time=TF),
+                run_time=TF,
+            )
+            self.wait(TM2)
 
             self.play(
                 Write(rec_loss),
                 Write(sink_loss),
                 run_time=TW,
             )
+            self.wait(TM2)
+
             self.play(
                 Write(total_loss),
                 run_time=TM,
             )
             self.wait(TM2)
 
-            self.play(
-                FadeOut(VGroup(*soft_lines), run_time=TF),
-                FadeOut(VGroup(*flow_arrows), run_time=TF),
-                FadeOut(prob_note, run_time=TF),
-                run_time=TF,
-            )
-
-            label = (
-                "Hard matching is discrete and brittle. "
-                "Soft matching is continuous, differentiable, and aligns distributions."
-            )
+            label = "Soft matching is continuous, differentiable, and aligns distributions."
             insight = make_insight_box(label)
             self.play(FadeIn(insight), run_time=TF)
             self.wait(TL)
@@ -1808,26 +1813,39 @@ class Scene14SinkhornConvergence(Scene):
             # --- Phase 1: Random initial matrix ---
             rng = np.random.default_rng(99)
             initial_matrix: np.ndarray = rng.uniform(0.1, 1.0, (self.N_USERS, self.N_USERS))
-            grid_initial = self._build_heatmap(initial_matrix, np.array([0.0, 0.0, 0.0]))
 
-            iter_label = Text("Random initialization", font_size=22, color=C_MATCH)
-            iter_label.move_to(np.array([0.0, -2.0, 0.0]))
+            number_grid = self._build_number_matrix(initial_matrix, np.array([0.0, -0.3, 0.0]))
+
+            iter_label = Text("Random cost matrix", font_size=22, color=C_MATCH)
+            iter_label.move_to(np.array([0.0, -2.8, 0.0]))
+
+            legend = MathTex(r"arr[i, j] = \text{transport weight from user } i \text{ to user } j", font_size=36, color=C_LOSS) 
+            legend.next_to(number_grid, UP, buff=0.3)
+
+            self.play(FadeIn(number_grid), Write(iter_label), FadeIn(legend), run_time=TM)
+            self.wait(TM2)
+
+            heatmap_grid = self._build_heatmap(initial_matrix, np.array([0.0, 0.0, 0.0]))
 
             legend = MathTex(r"arr[i, j] = \text{transport weight from user } i \text{ to user } j", font_size=36, color=C_LOSS)
-            legend.next_to(grid_initial, UP, buff=0.3)
+            legend.next_to(heatmap_grid, UP)
 
-            self.play(FadeIn(grid_initial), Write(iter_label), FadeIn(legend), run_time=TM)
-            self.wait(TM2)
+            self.play(
+                ReplacementTransform(number_grid, heatmap_grid),
+                iter_label.animate.move_to(np.array([0.0, -2.25, 0.0])),
+                run_time=TM,
+            )
+            self.wait(TM)
 
             # --- Phase 2: After row normalization ---
             row_norm: np.ndarray = initial_matrix / initial_matrix.sum(axis=1, keepdims=True)
             grid_row = self._build_heatmap(row_norm, np.array([0.0, 0.0, 0.0]))
 
             new_label = Text("After row normalization", font_size=22, color=C_MATCH)
-            new_label.move_to(np.array([0.0, -2.0, 0.0]))
+            new_label.move_to(np.array([0.0, -2.25, 0.0]))
 
             self.play(
-                ReplacementTransform(grid_initial, grid_row),
+                ReplacementTransform(heatmap_grid, grid_row),
                 ReplacementTransform(iter_label, new_label),
                 run_time=TM,
             )
@@ -1838,7 +1856,7 @@ class Scene14SinkhornConvergence(Scene):
             grid_col = self._build_heatmap(col_norm, np.array([0.0, 0.0, 0.0]))
 
             col_label = Text("After column normalization", font_size=22, color=C_MATCH)
-            col_label.move_to(np.array([0.0, -2.0, 0.0]))
+            col_label.move_to(np.array([0.0, -2.25, 0.0]))
 
             self.play(
                 ReplacementTransform(grid_row, grid_col),
@@ -1856,7 +1874,7 @@ class Scene14SinkhornConvergence(Scene):
             grid_conv = self._build_heatmap(converged, np.array([0.0, 0.0, 0.0]))
 
             conv_label = Text("Converged: Stable transport plan", font_size=22, color=C_MATCH)
-            conv_label.move_to(np.array([0.0, -2.0, 0.0]))
+            conv_label.move_to(np.array([0.0, -2.25, 0.0]))
 
             self.play(
                 ReplacementTransform(grid_col, grid_conv),
@@ -1893,7 +1911,7 @@ class Scene14SinkhornConvergence(Scene):
         """
         logger.debug(f"_build_heatmap: matrix shape={matrix.shape}")
         n: int = matrix.shape[0]
-        cell_size: float = 0.6
+        cell_size: float = 0.67
         cells: List[Rectangle] = []
         m_max: float = float(matrix.max())
         for row in range(n):
@@ -1913,6 +1931,57 @@ class Scene14SinkhornConvergence(Scene):
                 y_pos: float = center[1] + (n / 2.0 - row - 0.5) * cell_size
                 cell.move_to(np.array([x_pos, y_pos, 0.0]))
                 cells.append(cell)
+        return VGroup(*cells)
+
+    def _build_number_matrix(
+        self,
+        matrix: np.ndarray,
+        center: np.ndarray,
+    ) -> VGroup:
+        """
+        Create a grid-based matrix visualization with bordered cells and numeric values.
+
+        Args:
+            matrix (np.ndarray): A 2D square matrix containing numerical values.
+            center (np.ndarray): The (x, y, z) coordinates representing the center position
+                                of the entire matrix on the scene.
+
+        Returns:
+            VGroup: A group of VGroup elements, where each sub-group contains:
+                    - A Square representing the cell border
+                    - A Text object displaying the value inside the cell
+        """
+        n = matrix.shape[0]
+        cell_size = 0.8
+
+        cells = []
+        for row in range(n):
+            for col in range(n):
+                value = matrix[row, col]
+
+                # Create square cell with visible border
+                square = Square(
+                    side_length=cell_size,
+                    stroke_color=C_ACC,
+                    stroke_width=1.5,
+                    fill_opacity=0.0,
+                )
+
+                # Create text displaying the matrix value
+                text = Text(f"{value:.2f}", font_size=18, color=C_ACC)
+
+                # Compute position so that the grid is centered
+                x_pos = center[0] + (col - n / 2 + 0.5) * cell_size
+                y_pos = center[1] + (n / 2 - row - 0.5) * cell_size
+
+                # Move elements to their positions
+                square.move_to([x_pos, y_pos, 0.0])
+                text.move_to(square.get_center())
+
+                # Group square and text together
+                cell = VGroup(square, text)
+                cells.append(cell)
+
         return VGroup(*cells)
     
 
@@ -2052,13 +2121,11 @@ class Scene16KLvsSinkhorn(Scene):
             logger.info("Scene16KLvsSinkhorn.construct: start")
             set_background(self)
 
-            title = make_title("KL Divergence vs Sinkhorn Distance")
-            subtitle = Text("Handling non-overlapping distributions", font_size=24, color=C_ACC, font="Sans")
-            subtitle.next_to(title[0], DOWN, buff=0.15)
-            title_group = VGroup(title, subtitle)
-            self.play(FadeIn(title_group), run_time=TF)
+            title = make_title("KL Divergence vs Sinkhorn Distance", "Handling non-overlapping distributions")
+            self.play(FadeIn(title), run_time=TF)
 
-            # --- Shared setup: two side-by-side panels ---
+
+            # --- PHASE 1: KL Divergence ---
             axes_l = Axes(
                 x_range=[-6.0, 6.0, 2.0],
                 y_range=[0.0, 0.59, 0.1],
@@ -2069,38 +2136,13 @@ class Scene16KLvsSinkhorn(Scene):
             )
             axes_l.x_axis.add_tip(tip_length=0.15)
             axes_l.y_axis.add_tip(tip_length=0.15)
-
-            axes_l.shift(LEFT * 3.3 + DOWN * 0.5)
+            axes_l.move_to(ORIGIN + DOWN * 0.5)
 
             kl_header = Text("KL Divergence (Failed)", font_size=22, color=C_FLOW, weight="BOLD", font="Sans")
             kl_header.next_to(axes_l, UP, buff=0.5)
 
-            axes_r = Axes(
-                x_range=[-6.0, 6.0, 2.0],
-                y_range=[0.0, 0.59, 0.1],
-                x_length=5.5,
-                y_length=3.5,
-                axis_config={"color": C_TEXT, "stroke_width": 1},
-                tips=False,
-            )
-            axes_r.x_axis.add_tip(tip_length=0.15)
-            axes_r.y_axis.add_tip(tip_length=0.15)
-
-            axes_r.shift(RIGHT * 3.3 + DOWN * 0.5)
-
-            sink_header = Text("Sinkhorn Distance (Works)", font_size=22, color=C_B, weight="BOLD", font="Sans")
-            sink_header.next_to(axes_r, UP, buff=0.55)
-
-            divider = DashedLine(
-                start=np.array([0.0, 2.0, 0.0]),
-                end=np.array([0.0, -2.5, 0.0]),
-                color=C_SOFT, stroke_width=1.5,
-            )
-
             self.play(
                 Create(axes_l), Write(kl_header),
-                Create(axes_r), Write(sink_header),
-                FadeIn(divider),
                 run_time=TM,
             )
 
@@ -2110,32 +2152,23 @@ class Scene16KLvsSinkhorn(Scene):
                 x_range=[-6.0, 6.0],
                 color=C_A, stroke_width=2.5,
             )
+
             target_kl = axes_l.plot(
                 lambda x: (1.0 / (1.1 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 1.0) / 1.1) ** 2),
                 x_range=[-6.0, 6.0],
                 color=C_B, stroke_width=2.5,
             )
 
-            source_sink = axes_r.plot(
-                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x + 3.5) / 0.8) ** 2),
-                x_range=[-6.0, 0.0],
-                color=C_A, stroke_width=2.5,
-            )
-            target_sink = axes_r.plot(
-                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 3.5) / 0.8) ** 2),
-                x_range=[0.0, 6.0],
-                color=C_B, stroke_width=2.5,
-            )
-
             self.play(
                 Create(source_kl), Create(target_kl),
-                Create(source_sink), Create(target_sink),
                 run_time=TM,
             )
-            overlap_note = Text("Overlap: KL is well-defined", font_size=18, color=C_MATCH, font="Sans")
-            overlap_note.next_to(axes_l, DOWN, buff=0.15)
-            self.play(FadeIn(overlap_note), run_time=TF)
-            self.wait(TS)
+
+            overlap_note = Text("Overlap: KL is well-defined", font_size=20, color=C_MATCH)
+            overlap_note.next_to(axes_l, DOWN, buff=0.2)
+
+            self.play(FadeIn(overlap_note, run_time=TF), run_time=TM)
+            self.wait(TM)
 
             # --- Phase A2/A3: KL non-overlap and instability ---
             source_kl_no = axes_l.plot(
@@ -2144,6 +2177,7 @@ class Scene16KLvsSinkhorn(Scene):
                 color=C_A,
                 stroke_width=2.5,
             )
+
             target_kl_no = axes_l.plot(
                 lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 3.5) / 0.8) ** 2),
                 x_range=[0.0, 6.0],
@@ -2158,50 +2192,92 @@ class Scene16KLvsSinkhorn(Scene):
                 run_time=TM,
             )
 
-            zero_region = Rectangle(
-                width=2.1,
-                height=1.3,
-                color=C_FLOW,
-                stroke_width=2.0,
-                fill_opacity=0.18,
-            )
-            zero_region.move_to(axes_l.c2p(-3.4, 0.25))
-            log_zero = MathTex(r"\log(0) \Rightarrow \infty", font_size=34, color=C_FLOW)
+            log_zero = MathTex(r"\log(0) \rightarrow \infty", font_size=40, color=C_FLOW)
             log_zero.next_to(axes_l, DOWN, buff=0.15)
 
-            kl_counter = Integer(0, font_size=30, color=C_FLOW)
-            kl_counter.next_to(log_zero, DOWN, buff=0.12)
-            counter_label = Text("KL value", font_size=17, color=C_FLOW, font="Sans")
-            counter_label.next_to(kl_counter, LEFT, buff=0.12)
+            counter_label = Text("KL value =", font_size=24, color=C_FLOW)
+            kl_counter = Integer(0, font_size=40, color=C_FLOW)
+            kl_counter.next_to(counter_label, RIGHT, buff=0.2)
+
+            kl_group = VGroup(counter_label, kl_counter).next_to(log_zero, DOWN, buff=0.2)
 
             self.play(
-                FadeIn(zero_region),
                 Write(log_zero),
-                FadeIn(counter_label),
-                FadeIn(kl_counter),
+                FadeIn(kl_group, shift=RIGHT * 0.2),
                 run_time=TM,
             )
-            self.play(ChangingDecimal(kl_counter, lambda t: t * 100000), run_time=TM)
+            self.wait(TL)
 
-            kl_infinity = MathTex(r"KL(P\|Q) = \infty", font_size=36, color=C_FLOW)
+            self.play(ChangingDecimal(kl_counter, lambda t: t * 999999), run_time=TL)
+            self.wait(TM)
+
+            kl_infinity = MathTex(r"KL(P\|Q) = \infty", font_size=40, color=C_FLOW)
             kl_infinity.next_to(axes_l, DOWN, buff=0.2)
+
             self.play(
-                FadeOut(VGroup(log_zero, kl_counter, counter_label), run_time=TF),
-                Write(kl_infinity),
-                run_time=TF,
+                FadeOut(VGroup(log_zero, kl_group), run_time=TF),
+                FadeIn(kl_infinity, run_time=TF),
+                run_time=TM,
             )
+            self.wait(TL)  
+            
+            kl_graph_group = VGroup(axes_l, source_kl, target_kl, kl_infinity)
+            self.play(
+                kl_graph_group.animate.shift(LEFT * 2.5),
+                run_time=TM,
+            )
+            self.wait(TM)
 
             kl_insight = VGroup(
-                Text("Density matching", font_size=18, color=C_FLOW, font="Sans"),
-                Text("Needs support overlap", font_size=18, color=C_FLOW, font="Sans"),
-                Text("Diverges on zero-density regions", font_size=18, color=C_FLOW, font="Sans"),
-            ).arrange(DOWN, aligned_edge=LEFT, buff=0.16)
-            kl_insight.move_to(np.array([-3.3, -0.1, 0.0]))
+                Text("Density matching", font_size=20, color=C_FLOW),
+                Text("Needs support overlap", font_size=20, color=C_FLOW),
+                Text("Diverges on zero-density regions", font_size=20, color=C_FLOW),
+            ).arrange(DOWN, buff=0.25)
 
-            self.play(FadeIn(kl_insight, shift=LEFT * 0.2), run_time=TM)
+            kl_insight.move_to(np.array([3.0, -0.5, 0.0]))
+            self.play(FadeIn(kl_insight, shift=RIGHT * 0.2), run_time=TM)
             self.wait(TM2)
 
-            # --- Phase B: Sinkhorn transport mechanism on same non-overlap setup ---
+            # KL panel disappear before showing Sinkhorn
+            self.play(
+                FadeOut(axes_l), FadeOut(source_kl), FadeOut(target_kl), FadeOut(kl_infinity),
+                FadeOut(kl_header), FadeOut(kl_insight),
+                run_time=TM
+            )
+            self.wait(TM)
+
+            # --- PHASE 2: Sinkhorn Distance ---
+            axes_r = Axes(
+                x_range=[-6.0, 6.0, 2.0],
+                y_range=[0.0, 0.59, 0.1],
+                x_length=5.5,
+                y_length=3.5,
+                axis_config={"color": C_TEXT, "stroke_width": 1},
+                tips=False,
+            )
+            axes_r.x_axis.add_tip(tip_length=0.15)
+            axes_r.y_axis.add_tip(tip_length=0.15)
+            axes_r.move_to(ORIGIN + DOWN * 0.5)
+
+            sink_header = Text("Sinkhorn Distance (Works)", font_size=22, color=C_B, weight="BOLD", font="Sans")
+            sink_header.next_to(axes_r, UP, buff=0.5)
+
+            self.play(Create(axes_r), Write(sink_header), run_time=TM)
+
+            source_sink = axes_r.plot(
+                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x + 3.5) / 0.8) ** 2),
+                x_range=[-6.0, 0.0],
+                color=C_A, stroke_width=2.5,
+            )
+            target_sink = axes_r.plot(
+                lambda x: (1.0 / (0.8 * math.sqrt(2 * PI))) * math.exp(-0.5 * ((x - 3.5) / 0.8) ** 2),
+                x_range=[0.0, 6.0],
+                color=C_B, stroke_width=2.5,
+            )
+
+            self.play(Create(source_sink), Create(target_sink), run_time=TM)
+            self.wait(TM)
+
             transport_arrows: List[Arrow] = []
             for sx in [-4.0, -3.3, -2.6]:
                 for tx in [2.8, 3.5, 4.2]:
@@ -2210,7 +2286,7 @@ class Scene16KLvsSinkhorn(Scene):
                         Arrow(
                             start=axes_r.c2p(sx, 0.02),
                             end=axes_r.c2p(tx, 0.02),
-                            color=C_LOSS,
+                            color=C_FLOW,
                             stroke_width=max(1.2, 4.6 - 0.45 * dist),
                             stroke_opacity=max(0.30, 1.0 - 0.06 * dist),
                             buff=0.0,
@@ -2228,85 +2304,113 @@ class Scene16KLvsSinkhorn(Scene):
                         stroke_width=arr.get_stroke_width() + 1.2,
                         stroke_opacity=0.12,
                         buff=0.0,
-                        tip_length=0.16,
+                        tip_length=0.18,
                     )
                 )
 
-            sink_value = MathTex(r"W_\varepsilon(P, Q) < \infty", font_size=36, color=C_B)
+            sink_value = MathTex(r"W_\varepsilon(P, Q) \neq \infty", font_size=40, color=C_B)
             sink_value.next_to(axes_r, DOWN, buff=0.2)
-            sink_entropy = Text("Entropic smoothing -> stable gradients", font_size=18, color=C_MATCH, font="Sans")
-            sink_entropy.next_to(sink_value, DOWN, buff=0.1)
+            sink_entropy = MathTex(r"\text{Entropic smoothing} \rightarrow \text{stable gradients}", font_size=32, color=C_MATCH)
+            sink_entropy.next_to(sink_value, DOWN, buff=0.2)
 
             self.play(
                 LaggedStart(*[Create(a) for a in transport_arrows], lag_ratio=0.08),
                 Write(sink_value),
                 run_time=TM,
             )
+            self.wait(TM)
+
             self.play(
                 LaggedStart(*[FadeIn(a) for a in smooth_arrows], lag_ratio=0.04),
                 FadeIn(sink_entropy),
                 run_time=TM,
             )
+            self.wait(TM)
+
+            sink_graph_group = VGroup(axes_r, source_sink, target_sink, *transport_arrows, *smooth_arrows, sink_value, sink_entropy)
+            self.play(
+                sink_graph_group.animate.shift(LEFT * 2.5),
+                run_time=TM,    
+            )
+            self.wait(TM)
 
             sink_insight = VGroup(
-                Text("No overlap required", font_size=18, color=C_B, font="Sans"),
-                Text("Uses geometry + transport cost", font_size=18, color=C_B, font="Sans"),
-                Text("Smooth and differentiable", font_size=18, color=C_B, font="Sans"),
-            ).arrange(DOWN, aligned_edge=LEFT, buff=0.16)
-            sink_insight.move_to(np.array([3.3, -0.1, 0.0]))
-            self.play(FadeIn(sink_insight, shift=RIGHT * 0.2), run_time=TM)
-            self.wait(TS)
+                Text("No overlap required", font_size=20, color=C_B),
+                Text("Uses geometry + transport cost", font_size=20, color=C_B),
+                Text("Smooth and differentiable", font_size=20, color=C_B),
+            ).arrange(DOWN, buff=0.25)
 
-            # --- Phase C: side-by-side comparison table ---
+            sink_insight.move_to(np.array([3.0, -0.5, 0.0]))
+            self.play(FadeIn(sink_insight, shift=RIGHT * 0.2), run_time=TM)
+            self.wait(TM)
+
+            # --- Phase C: Side-by-side comparison table ---
             self.play(
-                FadeOut(axes_l), FadeOut(source_kl), FadeOut(target_kl), FadeOut(kl_infinity),
                 FadeOut(axes_r), FadeOut(source_sink), FadeOut(target_sink), FadeOut(sink_value),
-                FadeOut(divider),
-                FadeOut(zero_region),
                 FadeOut(VGroup(*transport_arrows)),
                 FadeOut(VGroup(*smooth_arrows)),
-                FadeOut(kl_header), FadeOut(sink_header),
-                FadeOut(kl_insight), FadeOut(sink_insight), FadeOut(sink_entropy),
+                FadeOut(sink_header),
+                FadeOut(sink_insight), FadeOut(sink_entropy),
                 run_time=TM
             )
 
-            table_title = Text("Deep Comparison", font_size=28, color=C_TEXT, weight="BOLD", font="Sans")
+            table_title = Text("Deep Comparison", font_size=24, color=C_TEXT, weight="BOLD", font="Sans")
             table_title.move_to(np.array([0.0, 2.0, 0.0]))
 
-            rows = [
-                ("Requirement", "Overlap needed", "No overlap needed"),
-                ("Signal", "Density", "Geometry + cost"),
-                ("Behavior", "Diverges", "Stable"),
-                ("Matching", "Pointwise", "Global transport"),
-                ("Optimization", "Unstable", "Differentiable"),
-            ]
-
-            table_items: List[VGroup] = []
-            y0 = 1.2
-            for idx, (aspect, kl_v, sink_v) in enumerate(rows):
-                y = y0 - idx * 0.55
-                aspect_t = Text(aspect, font_size=19, color=C_TEXT, font="Sans")
-                aspect_t.move_to(np.array([-2.6, y, 0.0]))
-                kl_t = Text(kl_v, font_size=19, color=C_FLOW, font="Sans")
-                kl_t.move_to(np.array([0.2, y, 0.0]))
-                sink_t = Text(sink_v, font_size=19, color=C_B, font="Sans")
-                sink_t.move_to(np.array([3.3, y, 0.0]))
-                table_items.append(VGroup(aspect_t, kl_t, sink_t))
-
-            self.play(
-                FadeIn(table_title),
-                LaggedStart(*[FadeIn(row) for row in table_items], lag_ratio=0.14),
-                run_time=TM
+            table = Table(
+                [["Requirement", "Overlap needed", "No overlap needed"],
+                ["Signal", "Density", "Geometry + cost"],
+                ["Behavior", "Diverges", "Stable"],
+                ["Matching", "Pointwise", "Global transport"],
+                ["Optimization", "Unstable", "Differentiable"]],
+                col_labels=[Text("Aspect"), Text("KL"), Text("Sinkhorn")],
+                include_outer_lines=True
             )
 
-            final_insight = Tex(
-                r"KL = Compare probabilities \\\ Sinkhorn = Move probability mass",
-                font_size=44,
+            # Edit column colors
+            aspect_col = table.get_columns()[0]
+            kl_col = table.get_columns()[1]
+            sink_col = table.get_columns()[2]
+
+            aspect_col.set_color(C_TEXT)
+            kl_col.set_color(C_FLOW)
+            sink_col.set_color(C_B)
+
+            table.scale(0.4)
+
+            line1 = MathTex(
+                r"\text{KL} \rightarrow \text{Compare probabilities}",
+                font_size=32,
                 color=C_MATCH,
             )
-            final_insight.move_to(np.array([0.0, -2.0, 0.0]))
-            self.play(Write(final_insight), run_time=TM)
+
+            line2 = MathTex(
+                r"\text{Sinkhorn} \rightarrow \text{Move probability mass}",
+                font_size=32,
+                color=C_MATCH,
+            )
+
+            final_insight = VGroup(line1, line2).arrange(DOWN, buff=0.25)
+            content = VGroup(
+                table,
+                final_insight
+            ).arrange(DOWN, buff=0.4)
+
+            content.next_to(table_title, DOWN, buff=0.3)
+
+            self.play(FadeIn(table_title, run_time=TF), run_time=TM)
+            self.wait(TM)
+
+            self.play(FadeIn(table, run_time=TF), run_time=TM)
+            self.wait(TM)
+
+            self.play(LaggedStart(
+                Write(line1),
+                Write(line2),
+                lag_ratio=0.2
+            ), run_time=TM)
             self.wait(TL)
+
             logger.info("Scene16KLvsSinkhorn.construct: done")
 
         except Exception as exc:
