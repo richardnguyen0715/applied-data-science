@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from src.data.dataset import (
     CIFAR10LTContrastiveDataset,
     CreditCardFraudDataset,
-    create_data_loaders,
 )
 from src.data.imbalance import analyze_class_distribution, get_class_weights, print_class_distribution
 from src.data.transforms import get_cifar10_transform, get_creditcard_transform
@@ -76,16 +75,18 @@ def run_contrastive_pipeline(
         )
         test_transform = get_cifar10_transform(train=False)
 
-        train_dataset_raw = CIFAR10LTContrastiveDataset(
-            split="train",
-            transform=None,
-            dataset_config=config.data.cifar10_config,
-        )
-
         # Create augmented datasets for contrastive learning
         train_dataset_contrastive = CIFAR10LTContrastiveDataset(
             split="train",
             transform=train_transform,
+            contrastive=True,
+            dataset_config=config.data.cifar10_config,
+        )
+
+        val_dataset_contrastive = CIFAR10LTContrastiveDataset(
+            split="val",
+            transform=train_transform,
+            contrastive=True,
             dataset_config=config.data.cifar10_config,
         )
 
@@ -95,23 +96,23 @@ def run_contrastive_pipeline(
             dataset_config=config.data.cifar10_config,
         )
 
-        
-
     elif config.data.dataset_name == "credit-card-fraud":
         # Load Credit Card Fraud Detection (no augmentation for tabular data)
         train_transform = get_creditcard_transform()
         test_transform = get_creditcard_transform()
 
-        # Create datasets
-        train_dataset_raw = CreditCardFraudDataset(
-            split="train",
-            transform=None,
-            normalize=True,
-        )
-
+        # Create augmented datasets for contrastive learning
         train_dataset_contrastive = CreditCardFraudDataset(
             split="train",
             transform=train_transform,
+            contrastive=True,
+            normalize=True,
+        )
+
+        val_dataset_contrastive = CreditCardFraudDataset(
+            split="val",
+            transform=train_transform,
+            contrastive=True,
             normalize=True,
         )
 
@@ -128,7 +129,7 @@ def run_contrastive_pipeline(
         raise ValueError(f"Unknown dataset: {config.data.dataset_name}")
 
     # Analyze class distribution
-    class_counts = analyze_class_distribution(train_dataset_raw)
+    class_counts = analyze_class_distribution(train_dataset_contrastive)
     print_class_distribution(class_counts)
 
     # Plot class distribution
@@ -137,44 +138,46 @@ def run_contrastive_pipeline(
         save_path=figure_dir / "class_distribution.png",
     )
 
-    VAL_RATIO = config.val_ratio
+    # ---- Class weights ----
+    class_weights = get_class_weights(class_counts, config.data.num_classes)
 
-    # --- Split train_dataset_contrastive into train/val ---
-    total_len = len(train_dataset_contrastive)
-    val_len = int(total_len * VAL_RATIO)
-    train_len = total_len - val_len    
+    # Stratified split
+    from torch.utils.data import WeightedRandomSampler
 
-    if val_len > 0:
-        train_subset, val_subset = torch.utils.data.random_split(
-            train_dataset_contrastive, [train_len, val_len], generator=torch.Generator().manual_seed(config.seed)
-        )
-    else:
-        train_subset = train_dataset_contrastive
-        val_subset = None
+    # ---- Sampler ONLY for train_subset ----
+    train_labels = train_dataset_contrastive.labels
 
-    logger.info("Creating data loaders...")
-    train_loader, _, _ = create_data_loaders(
-        train_subset,
-        batch_size=config.contrastive_training.batch_size,
-        num_workers=config.data.num_workers,
-        shuffle_train=True,
+    sample_weights = torch.tensor(
+        [class_weights[label] for label in train_labels],
+        dtype=torch.float
     )
 
-    if val_subset is not None:
-        val_loader, _, _ = create_data_loaders(
-            val_subset,
-            batch_size=config.contrastive_training.batch_size,
-            num_workers=config.data.num_workers,
-            shuffle_train=False,
-        )
-    else:
-        val_loader = None
+    sampler = WeightedRandomSampler(
+        weights=sample_weights,
+        num_samples=len(sample_weights),
+        replacement=True
+    )
 
-    test_loader, _, _ = create_data_loaders(
+    logger.info("Creating data loaders...")
+    train_loader = DataLoader(
+        train_dataset_contrastive,
+        batch_size=config.contrastive_training.batch_size,
+        sampler=sampler, 
+        num_workers=config.data.num_workers,
+    )
+
+    val_loader = DataLoader(
+        val_dataset_contrastive,
+        batch_size=config.contrastive_training.batch_size,
+        num_workers=config.data.num_workers,
+        shuffle=False,
+    )
+
+    test_loader = DataLoader(
         test_dataset,
         batch_size=config.evaluation.eval_batch_size,
         num_workers=config.data.num_workers,
-        shuffle_train=False,
+        shuffle=False,
     )
 
     # ============ Train Contrastive Encoder ============
@@ -192,6 +195,7 @@ def run_contrastive_pipeline(
             use_bn=config.encoder.use_bn,
         )
         logger.info("Using ContrastiveEncoder (CNN) for image data")
+
     elif config.data.dataset_name == "credit-card-fraud":
         encoder = MLPEncoder(
             input_dim=30,
@@ -199,9 +203,10 @@ def run_contrastive_pipeline(
             projection_dim=config.encoder.projection_dim,
             num_layers=config.encoder.num_layers,
             use_bn=config.encoder.use_bn,
-            dropout=0.1,
+            dropout=0.05,
         )
         logger.info("Using MLPEncoder for tabular data")
+
     else:
         raise ValueError(f"Unknown dataset: {config.data.dataset_name}")
 
@@ -269,28 +274,41 @@ def run_contrastive_pipeline(
     logger.info("Creating downstream task datasets...")
 
     # Get features from contrastive encoder
-    feature_list = []
-    label_list = []
+    train_feature_list = []
+    train_label_list = []
 
+    val_feature_list = []
+    val_label_list = []
+
+    # Because the contrastive dataset returns ((x_i, x_j), label), 
+    # we can either use x_i or x_j for the classifier training
     feature_extractor.eval()
     with torch.no_grad():
-         for (x_i, x_j), labels in train_loader:
-            x_i = x_i.to(device)
-            x_j = x_j.to(device)
+        # Extract features for train sets  
+        for (x_i, _), labels in train_loader:
+            images = x_i.to(device)
             labels = labels.to(device)
 
-            # Concatenate 2 views
-            images = torch.cat([x_i, x_j], dim=0)   
             features = feature_extractor(images)
 
-            # Duplicate labels
-            labels = torch.cat([labels, labels], dim=0)
+            train_feature_list.append(features.cpu())
+            train_label_list.append(labels.cpu())
 
-            feature_list.append(features.cpu())
-            label_list.append(labels.cpu())
+        train_features = torch.cat(train_feature_list, dim=0)
+        train_labels = torch.cat(train_label_list, dim=0)
 
-    all_features = torch.cat(feature_list, dim=0)
-    all_labels = torch.cat(label_list, dim=0)
+        # Extract features for val sets
+        for (x_i, _), labels in val_loader:
+            images = x_i.to(device)
+            labels = labels.to(device)
+
+            features = feature_extractor(images)
+
+            val_feature_list.append(features.cpu())
+            val_label_list.append(labels.cpu())
+
+        val_features = torch.cat(val_feature_list, dim=0)
+        val_labels = torch.cat(val_label_list, dim=0)
 
     # Create simple dataset from features
     class FeatureDataset(torch.utils.data.Dataset):
@@ -305,42 +323,22 @@ def run_contrastive_pipeline(
             return self.features[idx], self.labels[idx]
 
 
-    feature_dataset = FeatureDataset(all_features, all_labels)
+    feature_train_dataset = FeatureDataset(train_features, train_labels)
+    feature_val_dataset = FeatureDataset(val_features, val_labels)
 
-    # --- Split feature_dataset into train/val for classifier ---
-    total_feat_len = len(feature_dataset)
-    val_feat_len = int(total_feat_len * VAL_RATIO)
-    train_feat_len = total_feat_len - val_feat_len
-
-    if val_feat_len > 0:
-        feature_train_subset, feature_val_subset = torch.utils.data.random_split(
-            feature_dataset, [train_feat_len, val_feat_len], generator=torch.Generator().manual_seed(config.seed)
-        )
-    else:
-        feature_train_subset = feature_dataset
-        feature_val_subset = None
-
-    feature_train_loader, _, _ = create_data_loaders(
-        feature_train_subset,
+    feature_train_loader = DataLoader(
+        feature_train_dataset,
         batch_size=config.classifier_training.batch_size,
         num_workers=0,
-        shuffle_train=True,
+        shuffle=True,
     )
 
-    if feature_val_subset is not None:
-        feature_val_loader, _, _ = create_data_loaders(
-            feature_val_subset,
-            batch_size=config.classifier_training.batch_size,
-            num_workers=0,
-            shuffle_train=False,
-        )
-    else:
-        feature_val_loader = None
-
-    # Get class weights for imbalanced classification
-    class_weights = torch.from_numpy(
-        get_class_weights(class_counts, config.data.num_classes)
-    ).float()
+    feature_val_loader = DataLoader(
+        feature_val_dataset,
+        batch_size=config.classifier_training.batch_size,
+        num_workers=0,
+        shuffle=False,
+    )
 
     classifier_checkpoint_dir = checkpoint_dir / "classifier"
     classifier_checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -384,17 +382,11 @@ def run_contrastive_pipeline(
 
     feature_extractor.eval()
     with torch.no_grad():
-         for (x_i, x_j), labels in test_loader:
-            x_i = x_i.to(device)
-            x_j = x_j.to(device)
+         for images, labels in test_loader:
+            images = images.to(device)
             labels = labels.to(device)
 
-            # Concatenate 2 views
-            images = torch.cat([x_i, x_j], dim=0)   
             features = feature_extractor(images)    
-
-            # Duplicate labels
-            labels = torch.cat([labels, labels], dim=0)
 
             test_features.append(features.cpu())
             test_labels.append(labels.cpu())

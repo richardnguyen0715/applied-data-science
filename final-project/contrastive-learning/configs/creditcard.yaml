@@ -3,7 +3,7 @@
 data:
   dataset_name: "credit-card-fraud"
   num_classes: 2
-  num_workers: 4
+  num_workers: 2
 
 encoder:
   architecture: "resnet18"
@@ -44,7 +44,7 @@ evaluation:
   num_classes: 2
   compute_confusion_matrix: true
 
-val_ratio: 0.1  # Default 10% for validation set
+val_ratio: 0.05
 seed: 42
 output_dir: "outputs/credit-card-fraud"
 device: "cuda"

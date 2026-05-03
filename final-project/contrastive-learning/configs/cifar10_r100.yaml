@@ -5,7 +5,7 @@ data:
   cifar10_config: "r-100"
   image_size: 32
   num_classes: 10
-  num_workers: 4
+  num_workers: 2
 
 augmentation:
   horizontal_flip: true
@@ -25,7 +25,7 @@ contrastive_loss:
   use_cosine_similarity: true
 
 contrastive_training:
-  batch_size: 128
+  batch_size: 256
   num_epochs: 100
   learning_rate: 0.5
   weight_decay: 0.0001
@@ -34,7 +34,7 @@ contrastive_training:
   warmup_epochs: 10
 
 classifier_training:
-  batch_size: 128
+  batch_size: 256
   num_epochs: 100
   learning_rate: 0.001
   weight_decay: 0.0001
@@ -51,7 +51,7 @@ evaluation:
   num_classes: 10
   compute_confusion_matrix: true
 
-val_ratio: 0.1  # Default 10% for validation set
+val_ratio: 0.05  # Reduced from 0.1 to 0.05 for imbalanced datasets (rare classes need more training samples)
 seed: 42
 output_dir: "outputs/cifar10-lt-r100"
 device: "cuda"
