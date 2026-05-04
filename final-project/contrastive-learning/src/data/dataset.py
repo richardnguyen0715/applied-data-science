@@ -70,11 +70,16 @@ class CIFAR10LTContrastiveDataset(ContrastiveDataset):
         super().__init__(split=split, transform=transform, contrastive=contrastive)
 
         # Load from HuggingFace
-        ds = load_dataset(dataset_name, dataset_config, split=split)
-        if split == 'val':
+        if split == 'test':
+            ds = load_dataset(dataset_name, dataset_config, split="test")
+        else:
             # HuggingFace doesn't have a separate val split, so we create it from train
             ds = load_dataset(dataset_name, dataset_config, split="train")
-            ds = ds.train_test_split(test_size=0.1, stratify_by_column="label", seed=1)["test"]
+            ds = ds.train_test_split(test_size=0.1, stratify_by_column="label", seed=1)
+            if split == 'train':
+                ds = ds["train"]
+            else: # split == 'val'
+                ds = ds["test"]
 
         self.data = ds
         self.labels = np.array(self.data["label"])
