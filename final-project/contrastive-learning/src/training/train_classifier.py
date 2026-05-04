@@ -73,7 +73,7 @@ def train_classifier(
 
     # Setup loss
     if class_weights is not None:
-        class_weights = class_weights.to(device)
+        class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
     criterion = ClassificationLoss(weight=class_weights)
 
     # Setup scheduler
