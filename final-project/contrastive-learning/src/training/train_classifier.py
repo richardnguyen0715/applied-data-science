@@ -88,7 +88,7 @@ def train_classifier(
         "learning_rate": [],
     }
 
-    best_val_acc = 0.0
+    best_val_loss = 0.0
     no_improve_epochs = 0
 
     for epoch in range(num_epochs):
@@ -167,6 +167,7 @@ def train_classifier(
                     val_total += labels.size(0)
 
             val_acc = 100 * val_correct / val_total
+
             history["val_loss"].append(val_loss)
             history["val_acc"].append(val_acc)
 
@@ -175,10 +176,10 @@ def train_classifier(
                 f"Val Acc: {val_acc:.2f}%"
             )
 
-            # Save checkpoint if val acc improved
+            # Save checkpoint if val loss improved
             if checkpoint_dir is not None:
-                if val_acc > best_val_acc:
-                    best_val_acc = val_acc
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
                     no_improve_epochs = 0
 
                     checkpoint_path = checkpoint_dir / "best_model.pt"
@@ -186,7 +187,7 @@ def train_classifier(
                         "epoch": epoch,
                         "model_state_dict": model.state_dict(),
                         "optimizer_state_dict": optimizer.state_dict(),
-                        "accuracy": val_acc,
+                        "loss": val_loss,
                     }, checkpoint_path)
                     logger.info(f"Saved best model to {checkpoint_path}")
                 else:

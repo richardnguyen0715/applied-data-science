@@ -2,7 +2,7 @@
 
 data:
   dataset_name: "cifar10-lt"
-  cifar10_config: "r-100"
+  cifar10_config: "r-10"
   image_size: 32
   num_classes: 10
   num_workers: 2
@@ -35,7 +35,7 @@ contrastive_training:
 
 classifier_training:
   batch_size: 256
-  num_epochs: 100
+  num_epochs: 30
   learning_rate: 0.01
   weight_decay: 0.0001
   momentum: 0.9

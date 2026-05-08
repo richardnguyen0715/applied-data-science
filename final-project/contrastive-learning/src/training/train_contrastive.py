@@ -171,7 +171,6 @@ def train_contrastive_encoder(
                     val_loss += loss.item()
 
             history["val_loss"].append(val_loss)
-
             logger.info(f"Val Loss: {val_loss:.4f}")
 
             # Save checkpoint if val loss improved

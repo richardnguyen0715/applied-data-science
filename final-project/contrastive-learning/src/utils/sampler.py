@@ -31,7 +31,7 @@ class BalancedBatchSampler(Sampler):
 
     def __iter__(self):
         count = 0
-        while True:
+        for _ in range(len(self)):
             # Choose random n_classes
             classes = random.sample(self.labels_set, self.n_classes)
 

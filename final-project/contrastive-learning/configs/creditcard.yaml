@@ -6,7 +6,7 @@ data:
   num_workers: 2
 
 encoder:
-  architecture: "resnet18"
+  architecture: "resnet50"
   projection_dim: 128
   hidden_dim: 2048
   num_layers: 2
@@ -19,7 +19,7 @@ contrastive_loss:
 
 contrastive_training:
   batch_size: 128
-  num_epochs: 20
+  num_epochs: 50
   learning_rate: 0.01
   weight_decay: 0.0001
   momentum: 0.9
@@ -28,11 +28,11 @@ contrastive_training:
 
 classifier_training:
   batch_size: 128
-  num_epochs: 50
+  num_epochs: 30
   learning_rate: 0.01
   weight_decay: 0.0001
   momentum: 0.9
-  patience: 15
+  patience: 20
 
 classifier:
   num_classes: 2
