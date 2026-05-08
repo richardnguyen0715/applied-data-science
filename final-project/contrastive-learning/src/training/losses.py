@@ -123,40 +123,49 @@ class SupConLoss(nn.Module):
         # Concatenate labels
         if labels is not None:
             labels = torch.cat([labels, labels], dim=0)  # (2B,)
+        else:
+            raise ValueError("SupConLoss requires labels")
 
         # Compute similarity matrix
         similarity = torch.matmul(z, z.T) / self.temperature  # (2B, 2B)
 
-        # Remove self-pairs
-        similarity_without_diag = similarity.clone()
-        mask = torch.eye(2 * batch_size, dtype=torch.bool, device=device)
-        similarity_without_diag.masked_fill_(mask, -float("inf"))
+        # Numerical stability: subtract max
+        similarity_max, _ = torch.max(similarity, dim=1, keepdim=True)
+        logits = similarity - similarity_max.detach()
 
-        # Compute loss per sample
-        loss = 0.0
-        for i in range(2 * batch_size):
-            # Positive pairs (same label, different views)
-            if labels is not None:
-                pos_mask = (labels == labels[i]) & (~mask[i])
-                neg_mask = (labels != labels[i]) & (~mask[i])
-            else:
-                # If no labels, use original NT-Xent logic
-                if i < batch_size:
-                    pos_mask = torch.zeros(2 * batch_size, dtype=torch.bool, device=device)
-                    pos_mask[batch_size + i] = True
-                    neg_mask = ~pos_mask & (~mask[i])
-                else:
-                    pos_mask = torch.zeros(2 * batch_size, dtype=torch.bool, device=device)
-                    pos_mask[i - batch_size] = True
-                    neg_mask = ~pos_mask & (~mask[i])
+        # Create mask for self-pairs
+        self_mask = torch.eye(2 * batch_size, dtype=torch.bool, device=device)
 
-            pos_sim = torch.exp(similarity[i, pos_mask]).sum()
-            neg_sim = torch.exp(similarity[i, neg_mask]).sum()
+        # Create positive pairs mask: same label, not self
+        labels_eq = labels.unsqueeze(0) == labels.unsqueeze(1)  # (2B, 2B)
+        pos_mask = labels_eq & (~self_mask)
 
-            if pos_mask.sum() > 0:
-                loss -= torch.log(pos_sim / (pos_sim + neg_sim))
+        # Compute exp(logits) with self-pairs masked out
+        exp_logits = torch.exp(logits)
+        exp_logits = exp_logits * (~self_mask).float()
 
-        loss = loss / (2 * batch_size)
+        # Compute log(sum(exp(all))) for denominator
+        log_sum_exp_all = torch.log(exp_logits.sum(dim=1, keepdim=True))
+
+        # Compute log probability for positive pairs
+        log_prob = logits - log_sum_exp_all
+
+        # Number of positive samples for each anchor i
+        num_pos = pos_mask.sum(dim=1)  # Shape: (N,)
+
+        # Sum of log-probabilities over positive pairs for each anchor
+        # Broadcasting: mask keeps only positive entries, others become 0
+        sum_log_prob_pos = (log_prob * pos_mask).sum(dim=1)  # Shape: (N,)
+
+        # Compute mean log-probability over positives for each anchor
+        # clamp(min=1) avoids division by zero (for anchors with no positives)
+        mean_log_prob_pos = sum_log_prob_pos / num_pos.clamp(min=1)
+
+        # Identify anchors that actually have at least one positive
+        valid_mask = num_pos > 0
+
+        # Final loss
+        loss = -mean_log_prob_pos[valid_mask].mean()
 
         return loss
 

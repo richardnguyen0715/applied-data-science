@@ -71,13 +71,7 @@ def main() -> None:
     set_seed(config.seed)
 
     # Run pipeline
-    metrics = run_contrastive_pipeline(config=config)
-
-    print("\n" + "="*50)
-    print("Final Results:")
-    print("="*50)
-    for metric_name, metric_value in metrics.items():
-        print(f"{metric_name}: {metric_value:.4f}")
+    _ = run_contrastive_pipeline(config=config)
 
 
 if __name__ == "__main__":

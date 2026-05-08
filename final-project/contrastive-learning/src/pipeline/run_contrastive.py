@@ -25,6 +25,7 @@ from src.training.train_contrastive import train_contrastive_encoder
 from src.utils.config import Config
 from src.utils.logger import get_logger, setup_logger
 from src.utils.seed import set_seed
+from src.utils.sampler import BalancedBatchSampler
 
 
 def run_contrastive_pipeline(
@@ -85,7 +86,7 @@ def run_contrastive_pipeline(
 
         val_dataset_contrastive = CIFAR10LTContrastiveDataset(
             split="val",
-            transform=train_transform,
+            transform=test_transform,
             contrastive=True,
             dataset_config=config.data.cifar10_config,
         )
@@ -97,7 +98,7 @@ def run_contrastive_pipeline(
         )
 
     elif config.data.dataset_name == "credit-card-fraud":
-        # Load Credit Card Fraud Detection (no augmentation for tabular data)
+        # Load Credit Card Fraud Detection
         train_transform = get_creditcard_transform()
         test_transform = get_creditcard_transform()
 
@@ -111,7 +112,7 @@ def run_contrastive_pipeline(
 
         val_dataset_contrastive = CreditCardFraudDataset(
             split="val",
-            transform=train_transform,
+            transform=test_transform,
             contrastive=True,
             normalize=True,
         )
@@ -141,29 +142,26 @@ def run_contrastive_pipeline(
     # ---- Class weights ----
     class_weights = get_class_weights(class_counts, config.data.num_classes)
 
-    # Stratified split
-    from torch.utils.data import WeightedRandomSampler
-
-    # ---- Sampler ONLY for train_subset ----
-    train_labels = train_dataset_contrastive.labels
-
-    sample_weights = torch.tensor(
-        [class_weights[label] for label in train_labels],
-        dtype=torch.float
-    )
-
-    sampler = WeightedRandomSampler(
-        weights=sample_weights,
-        num_samples=len(sample_weights),
-        replacement=True
+    batch_sampler = BalancedBatchSampler(
+        labels=train_dataset_contrastive.labels,
+        n_classes=config.data.num_classes, 
+        n_samples=8                         
     )
 
     logger.info("Creating data loaders...")
+    # Use for training encoder
     train_loader = DataLoader(
         train_dataset_contrastive,
-        batch_size=config.contrastive_training.batch_size,
-        sampler=sampler, 
+        batch_sampler=batch_sampler, 
         num_workers=config.data.num_workers,
+    )
+
+    # Use for extracting features for classifier training 
+    plain_train_loader = DataLoader(
+        train_dataset_contrastive,
+        batch_size=config.contrastive_training.batch_size,
+        num_workers=config.data.num_workers,
+        shuffle=False,
     )
 
     val_loader = DataLoader(
@@ -279,13 +277,13 @@ def run_contrastive_pipeline(
 
     val_feature_list = []
     val_label_list = []
-
+    
     # Because the contrastive dataset returns ((x_i, x_j), label), 
     # we can either use x_i or x_j for the classifier training
     feature_extractor.eval()
     with torch.no_grad():
         # Extract features for train sets  
-        for (x_i, _), labels in train_loader:
+        for (x_i, _), labels in plain_train_loader:
             images = x_i.to(device)
             labels = labels.to(device)
 

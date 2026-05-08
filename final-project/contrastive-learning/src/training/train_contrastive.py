@@ -18,7 +18,7 @@ def train_contrastive_encoder(
     train_loader: DataLoader,
     val_loader: Optional[DataLoader] = None,
     num_epochs: int = 200,
-    learning_rate: float = 0.5,
+    learning_rate: float = 0.01,
     weight_decay: float = 1e-4,
     momentum: float = 0.9,
     temperature: float = 0.07,
