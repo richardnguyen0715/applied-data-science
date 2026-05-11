@@ -16,14 +16,9 @@ from src.utils.logger import get_logger
 
 import os
 from dotenv import load_dotenv
-from huggingface_hub import login
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
-
-# It is not compulsory to set HF_TOKEN for loading datasets from HuggingFace, but if you have one, it can help avoid rate limits and speed up downloads.
-if HF_TOKEN:
-    login(HF_TOKEN)
 
 class ContrastiveDataset(Dataset):
     """Base class for contrastive learning datasets."""
