@@ -30,7 +30,6 @@ def train_contrastive_encoder(
     log_every_n_steps: int = 10,
     save_every_n_epochs: int = 10,
     gradient_clip_val: float = 0.0,
-    patience: int = 20,
 ) -> Dict[str, list]:
     """
     Train contrastive encoder.
@@ -189,11 +188,6 @@ def train_contrastive_encoder(
                     logger.info(f"Saved best model to {checkpoint_path}")
                 else:
                     no_improve_epochs += 1
-
-                # Early stopping
-                if no_improve_epochs >= patience:
-                    logger.info(f"Early stopping at epoch {epoch+1}")
-                    break
 
         # Save checkpoint periodically
         if checkpoint_dir is not None and (epoch + 1) % save_every_n_epochs == 0:

@@ -1,4 +1,4 @@
-# Configuration for CIFAR-10-LT experiment (Imbalance ratio: 100:1)
+# Configuration for CIFAR-10-LT experiment
 
 data:
   dataset_name: "cifar10-lt"
@@ -51,7 +51,7 @@ evaluation:
   num_classes: 10
   compute_confusion_matrix: true
 
-val_ratio: 0.05  # Reduced from 0.1 to 0.05 for imbalanced datasets (rare classes need more training samples)
+val_ratio: 0.05
 seed: 42
-output_dir: "outputs/cifar10-lt-r100"
+output_dir: "outputs/cifar10lt-r10"
 device: "cuda"

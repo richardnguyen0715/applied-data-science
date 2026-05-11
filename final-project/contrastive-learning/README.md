@@ -13,7 +13,7 @@ End-to-end pipeline for contrastive learning on imbalanced datasets. This projec
 
 ## Datasets
 
-1. **CIFAR-10-LT**: Long-tail distribution of CIFAR-10 (imbalance ratio 100:1)
+1. **CIFAR-10-LT**: Long-tail distribution of CIFAR-10 (imbalance ratio 10:1)
 2. **Credit Card Fraud Detection**: Tabular dataset with binary classification
 
 ## Project Structure
@@ -47,9 +47,9 @@ contrastive-learning/
 │       ├── config.py           # Configuration
 │       ├── logger.py           # Logging
 │       └── seed.py             # Random seed management
+│       └── sampler.py          # Sampler implementation 
 ├── configs/                    # Configuration files
-│   ├── default.yaml            # CIFAR-10-LT config
-│   ├── cifar10_r100.yaml       # CIFAR-10-LT (alias)
+│   ├── cifar10lt.yaml          # CIFAR-10-LT config
 │   └── creditcard.yaml         # Credit Card config
 ├── main.py                     # Main entry point
 ├── pyproject.toml              # Project config
@@ -91,7 +91,7 @@ python verify_setup.py
 ### Train on CIFAR-10-LT
 
 ```bash
-python main.py --config configs/cifar10_r100.yaml --dataset cifar10-lt
+python main.py --config configs/cifar10lt.yaml --dataset cifar10-lt
 ```
 
 ### Train on Credit Card Dataset
@@ -110,27 +110,30 @@ bash src/cli/run_all.sh
 
 Configuration files are in YAML format:
 
-- `configs/default.yaml`: Default CIFAR-10-LT configuration
-- `configs/cifar10_r100.yaml`: Alias for default.yaml
+- `configs/cifar10lt.yaml`: Default CIFAR-10-LT configuration (r-10 imbalance ratio)
 - `configs/creditcard.yaml`: Credit Card Fraud detection configuration
 
 Key parameters:
 - `augmentation`: Data augmentation settings
 - `contrastive_training`: Contrastive pre-training settings
 - `classifier_training`: Downstream classifier training settings
-- `batch_size`: Batch size (default: 128)
+- `contrastive_loss`: Loss function settings (loss_type: supcon, temperature: 0.1)
+- `classifier`: Classifier layer settings
 
 ## Key Differences Between Datasets
 
 ### CIFAR-10-LT (Image Dataset)
-- Augmentation: RandomCrop with padding + RandomHorizontalFlip
-- Normalization: ImageNet statistics
-- Input shape: 3 x 32 x 32
+- **Loss Function**: SupConLoss (Supervised Contrastive Learning)
+- **Imbalance Ratio**: r-10 (10:1)
+- **Augmentation**: RandomCrop (32x32 with 4px padding) + RandomHorizontalFlip
+- **Normalization**: ImageNet statistics
+- **Input shape**: 3 x 32 x 32
 
 ### Credit Card (Tabular Dataset)
-- No augmentation applied (tabular data)
-- Simple normalization to tensor format
-- Input shape: varies based on features
+- **Loss Function**: SupConLoss (Supervised Contrastive Learning)
+- **Augmentation**: GaussianNoise + Dropout
+- **Normalization**: StandardScaler
+- **Input shape**: 30 features + 1 class
 
 ## References
 
@@ -164,10 +167,10 @@ poetry install
 
 The CIFAR-10-LT dataset is automatically downloaded from HuggingFace. You can specify the imbalance ratio:
 
+- `r-10`: Imbalance ratio 10:1
 - `r-20`: Imbalance ratio 20:1
 - `r-50`: Imbalance ratio 50:1
-- `r-100`: Imbalance ratio 100:1 (default)
-- `r-200`: Imbalance ratio 200:1
+- `r-100`: Imbalance ratio 100:1
 
 ### 2. Credit Card Fraud Detection
 
@@ -210,15 +213,15 @@ You can customize training parameters:
 ```bash
 python main.py \
     --dataset cifar10-lt \
-    --cifar10-config r-100 \
-    --encoder-architecture resnet18 \
+    --cifar10-config r-10 \
+    --encoder-architecture resnet50 \
     --projection-dim 128 \
-    --contrastive-epochs 200 \
-    --classifier-epochs 100 \
-    --contrastive-lr 0.5 \
-    --classifier-lr 0.001 \
-    --batch-size 512 \
-    --temperature 0.07 \
+    --contrastive-epochs 100 \
+    --classifier-epochs 30 \
+    --contrastive-lr 0.01 \
+    --classifier-lr 0.01 \
+    --batch-size 256 \
+    --temperature 0.1 \
     --output-dir outputs/custom \
     --seed 42
 ```
@@ -227,8 +230,8 @@ python main.py \
 
 ```
 Dataset Options:
-  --dataset {cifar10-lt, credit-card-fraud}    Dataset to use (default: cifar10-lt)
-  --cifar10-config {r-20, r-50, r-100, r-200}  CIFAR-10 imbalance ratio (default: r-100)
+  --dataset {cifar10-lt, credit-card-fraud}     Dataset to use (default: cifar10-lt)
+  --cifar10-config {r-10, r-20, r-50, r-100}    CIFAR-10 imbalance ratio (default: r-10)
 
 Model Options:
   --encoder-architecture {resnet18, resnet50}   Encoder architecture (default: resnet18)
@@ -236,14 +239,15 @@ Model Options:
   --hidden-dim int                              Hidden dimension (default: 2048)
 
 Training Options:
-  --contrastive-epochs int                      Contrastive training epochs (default: 200)
-  --classifier-epochs int                       Classifier training epochs (default: 100)
-  --contrastive-lr float                        Contrastive learning rate (default: 0.5)
-  --classifier-lr float                         Classifier learning rate (default: 0.001)
-  --batch-size int                              Batch size (default: 512)
-  --temperature float                           Temperature for loss (default: 0.07)
+  --contrastive-epochs int                      Contrastive training epochs (default: 100)
+  --classifier-epochs int                       Classifier training epochs (default: 30)
+  --contrastive-lr float                        Contrastive learning rate (default: 0.01)
+  --classifier-lr float                         Classifier learning rate (default: 0.01)
+  --batch-size int                              Batch size (default: 256)
+  --temperature float                           Temperature for loss (default: 0.1)
 
 General Options:
+  --val_ratio                                   Val/train split ratio (default: 0.05)  
   --output-dir path                             Output directory (default: outputs)
   --seed int                                    Random seed (default: 42)
   --device {cuda, cpu}                          Device to use (default: cuda)
@@ -255,9 +259,10 @@ The training pipeline consists of three main stages:
 
 ### Stage 1: Contrastive Encoder Training
 
-- Learns robust representations using **NT-Xent loss** (SimCLR-style)
-- Uses aggressive data augmentation (random crops, color jitter, blur, etc.)
-- Trains on unlabeled or self-supervised mode
+- Learns robust representations using **SupConLoss** (Supervised Contrastive Learning)
+- **CIFAR-10-LT**: Uses data augmentation with RandomCrop and RandomHorizontalFlip
+- **Credit Card**: Uses data augmentation with GaussianNoise and Dropout
+- Trains to leverage label information in the contrastive objective
 - **Output**: Pre-trained encoder that captures semantic information
 
 ### Stage 2: Downstream Classifier Training
@@ -275,39 +280,59 @@ The training pipeline consists of three main stages:
 
 ## Output
 
-Training outputs are saved to the `--output-dir`:
+Training outputs are saved to the configured `output_dir` (specified in each dataset's YAML config):
 
 ```
 outputs/
-├── checkpoints/
-│   ├── contrastive/
-│   │   ├── best_model.pt
-│   │   └── model_epoch_*.pt
-│   └── classifier/
-│       ├── best_model.pt
-│       └── model_epoch_*.pt
-├── logs/
-│   ├── pipeline.log
-│   ├── contrastive_training.log
-│   └── classifier_training.log
-└── figures/
-    ├── class_distribution.png
-    ├── contrastive_training.png
-    ├── classifier_training.png
-    └── confusion_matrix.png
+├── cifar10lt-r10/
+│   ├── checkpoints/
+│   │   ├── contrastive/
+│   │   │   ├── best_model.pt
+│   │   │   └── model_epoch_*.pt
+│   │   └── classifier/
+│   │       ├── best_model.pt
+│   │       └── model_epoch_*.pt
+│   ├── logs/
+│   │   ├── pipeline.log
+│   │   ├── contrastive_training.log
+│   │   └── classifier_training.log
+│   └── figures/
+│       ├── class_distribution.png
+│       ├── contrastive_training.png
+│       ├── classifier_training.png
+│       └── confusion_matrix.png
+└── credit-card-fraud/
+    ├── checkpoints/
+    │   ├── contrastive/
+    │   │   ├── best_model.pt
+    │   │   └── model_epoch_*.pt
+    │   └── classifier/
+    │       ├── best_model.pt
+    │       └── model_epoch_*.pt
+    ├── logs/
+    │   ├── pipeline.log
+    │   ├── contrastive_training.log
+    │   └── classifier_training.log
+    └── figures/
+        ├── class_distribution.png
+        ├── contrastive_training.png
+        ├── classifier_training.png
+        └── confusion_matrix.png
 ```
 
 ## Key Features
 
-### 1. Advanced Data Augmentation
+### 1. Dataset-Specific Data Augmentation
 
-The contrastive learning pipeline uses:
+The contrastive learning pipeline uses augmentations tailored to each dataset:
 
-- Random resized crops with configurable scale
-- Color jittering (brightness, contrast, saturation, hue)
-- Random grayscale conversion
-- Gaussian blur
-- Solarization
+**CIFAR-10-LT (Image Dataset)**:
+- RandomCrop (32x32 with 4px padding)
+- RandomHorizontalFlip
+
+**Credit Card (Tabular Dataset)**:
+- GaussianNoise
+- Dropout
 
 ### 2. Loss Functions
 
@@ -349,7 +374,7 @@ class ContrastiveTrainingConfig:
 
 The pipeline achieves good performance on both datasets:
 
-- **CIFAR-10-LT (r-100)**: ~70-75% balanced accuracy
+- **CIFAR-10-LT (r-10)**: ~70-75% balanced accuracy
 - **Credit Card Fraud**: ~95%+ accuracy with class-aware metrics
 
 Results depend on:
