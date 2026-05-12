@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from src.data.dataset import (
-    CIFAR10LTContrastiveDataset,
+    CIFAR10LTDataset,
     CreditCardFraudDataset,
 )
 from src.data.imbalance import analyze_class_distribution, get_class_weights, print_class_distribution
@@ -77,21 +77,21 @@ def run_contrastive_pipeline(
         test_transform = get_cifar10_transform(train=False)
 
         # Create augmented datasets for contrastive learning
-        train_dataset_contrastive = CIFAR10LTContrastiveDataset(
+        train_dataset_contrastive = CIFAR10LTDataset(
             split="train",
             transform=train_transform,
             contrastive=True,
             dataset_config=config.data.cifar10_config,
         )
 
-        val_dataset_contrastive = CIFAR10LTContrastiveDataset(
+        val_dataset_contrastive = CIFAR10LTDataset(
             split="val",
             transform=test_transform,
             contrastive=True,
             dataset_config=config.data.cifar10_config,
         )
 
-        test_dataset = CIFAR10LTContrastiveDataset(
+        test_dataset = CIFAR10LTDataset(
             split="test",
             transform=test_transform,
             dataset_config=config.data.cifar10_config,
@@ -99,8 +99,13 @@ def run_contrastive_pipeline(
 
     elif config.data.dataset_name == "credit-card-fraud":
         # Load Credit Card Fraud Detection
-        train_transform = get_creditcard_transform()
-        test_transform = get_creditcard_transform()
+        train_transform = get_creditcard_transform(
+            train=True, 
+            dropout_rate=0.1,
+            noise_mean=0.0,
+            noise_std=0.01
+        )
+        test_transform = get_creditcard_transform(train=False)
 
         # Create augmented datasets for contrastive learning
         train_dataset_contrastive = CreditCardFraudDataset(

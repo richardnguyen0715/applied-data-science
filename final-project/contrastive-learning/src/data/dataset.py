@@ -51,7 +51,7 @@ class ContrastiveDataset(Dataset):
         raise NotImplementedError
 
 
-class CIFAR10LTContrastiveDataset(ContrastiveDataset):
+class CIFAR10LTDataset(ContrastiveDataset):
     """CIFAR-10-LT dataset for contrastive learning."""
 
     def __init__(

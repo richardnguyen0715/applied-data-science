@@ -39,42 +39,54 @@ def get_cifar10_transform(
     return transforms.Compose(transform_list)
 
 
-def get_creditcard_transform() -> transforms.Compose:
+def get_creditcard_transform(
+    train: bool = True,
+    dropout_rate: float = 0.1,
+    noise_mean: float = 0.0,
+    noise_std: float = 0.01,
+) -> transforms.Compose:
     """
-    Get transformation for credit card fraud dataset (tabular data).
-    
+    Transform for credit card fraud dataset (tabular).
+
+    Args:
+        train: Apply augmentation if True.
+        dropout_rate: Probability to drop features.
+        noise_mean: Mean of Gaussian noise.
+        noise_std: Std of Gaussian noise.
+
     Returns:
-        A callable transform that applies feature dropout and Gaussian noise.
+        Transformation pipeline.
     """
     class ToTensor:
         def __call__(self, x: Any) -> Tensor:
             if isinstance(x, torch.Tensor):
                 return x.detach().clone().float()
-            else:
-                return torch.tensor(x, dtype=torch.float32)
-
+            return torch.tensor(x, dtype=torch.float32)
 
     class AddGaussianNoise:
-        def __init__(self, mean: float = 0.0, std: float = 0.01) -> None:
+        def __init__(self, mean: float, std: float) -> None:
             self.mean = mean
             self.std = std
 
         def __call__(self, x: Tensor) -> Tensor:
-            noise: Tensor = torch.randn_like(x) * self.std
+            noise = torch.randn_like(x) * self.std
             return x + noise + self.mean
 
-
     class FeatureDropout:
-        def __init__(self, drop_prob: float = 0.1) -> None:
+        def __init__(self, drop_prob: float) -> None:
             self.drop_prob = drop_prob
 
         def __call__(self, x: Tensor) -> Tensor:
-            mask: Tensor = (torch.rand_like(x) > self.drop_prob).float()
+            mask = (torch.rand_like(x) > self.drop_prob).float()
             return x * mask
-    
-    return transforms.Compose([
-        ToTensor(),
-        FeatureDropout(0.1),
-        AddGaussianNoise(0.0, 0.01)
-    ])
+
+    transform_list = [ToTensor()]
+
+    if train:
+        transform_list.extend([
+            FeatureDropout(dropout_rate),
+            AddGaussianNoise(noise_mean, noise_std),
+        ])
+
+    return transforms.Compose(transform_list)
 
