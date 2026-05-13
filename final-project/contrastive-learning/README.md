@@ -4,7 +4,7 @@ End-to-end pipeline for contrastive learning on imbalanced datasets. This projec
 
 ## Features
 
-- Contrastive Learning with NT-Xent loss (SimCLR-style)
+- Contrastive Learning with SupConLoss.
 - Support for CIFAR-10-LT and Credit Card Fraud Detection datasets
 - Class-aware sampling and weighted loss functions for imbalanced classification
 - ResNet18 and ResNet50 encoders with configurable projection heads
@@ -104,6 +104,16 @@ python main.py --config configs/creditcard.yaml --dataset credit-card-fraud
 
 ```bash
 bash src/cli/run_all.sh
+```
+
+### Baseline Training
+
+```bash
+python baseline_training.py --dataset creditcard # Run on Credit Card Fraud Dataset
+
+python baseline_training.py --dataset cifar10lt # Run on CIFAR10 LT dataset
+
+python baseline_training.py --dataset all # Run on both datasets
 ```
 
 ## Configuration

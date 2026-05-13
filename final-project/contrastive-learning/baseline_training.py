@@ -250,9 +250,9 @@ def train_creditcard_baseline(seed: int = 42) -> Dict[str, float]:
 
     # Train model
     model = LogisticRegression(
-        max_iter=10000,
+        max_iter=1000,
         class_weight="balanced",
-        solver="saga",
+        solver="lbfgs",
         n_jobs=-1,
         random_state=seed,
     )
@@ -290,7 +290,7 @@ if __name__ == "__main__":
         train_cifar10lt_baseline(seed=args.seed)
     
     if args.dataset in ["creditcard", "all"]:
-        print("\nCredit Card Results:")
+        print("Credit Card Results:")
         train_creditcard_baseline(seed=args.seed)
 
 
